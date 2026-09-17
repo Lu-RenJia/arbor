@@ -1,0 +1,33 @@
+/* ===== Arbor全局样式 ===== */
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #333;
+}
+
+/* 页面标题 */
+h3 {
+  color: #1a1a1a;
+  font-weight: 600;
+  margin-top: 0;
+}
+
+/* 表格表头 */
+.n-data-table-th {
+  font-weight: 600 !important;
+}
+
+/* 侧边栏 */
+.n-layout-sider {
+  background: #fafafa !important;
+}
+
+/* 顶部栏 */
+.n-layout-header {
+  background: #fff !important;
+}
+
+/* 内容区 */
+.n-layout-content {
+  background: #f0f2f5 !important;
+}

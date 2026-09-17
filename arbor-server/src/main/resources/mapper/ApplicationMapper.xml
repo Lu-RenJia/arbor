@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.ApplicationMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.Application">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="user_id" property="userId"/>
+        <result column="env_id" property="envId"/>
+        <result column="input_params" property="inputParams"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT a.* FROM application a
+        <if test="flowName != null and flowName != ''">
+            JOIN flow f ON a.flow_id = f.id
+        </if>
+        <where>
+            <if test="name != null and name != ''">
+                AND a.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="flowName != null and flowName != ''">
+                AND f.name LIKE CONCAT('%', #{flowName}, '%')
+            </if>
+        </where>
+        ORDER BY a.update_time DESC, a.id DESC
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM application WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO application (name, flow_id, env_id, input_params, remark, uid)
+        VALUES (#{name}, #{flowId}, #{envId}, #{inputParams}, #{remark}, #{uid})
+    </insert>
+
+    <update id="update">
+        UPDATE application SET name = #{name}, flow_id = #{flowId}, env_id = #{envId},
+            input_params = #{inputParams}, remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectByIds" resultMap="BaseResultMap">
+        SELECT * FROM application WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM application WHERE id = #{id}
+    </delete>
+
+    <!-- 引用追踪：查找引用了指定流程的应用 -->
+    <select id="selectByFlowId" resultMap="BaseResultMap">
+        SELECT * FROM application WHERE flow_id = #{flowId}
+    </select>
+
+</mapper>

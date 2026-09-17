@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.SnapshotMapper">
+
+    <select id="selectLatestByFlowId" resultType="com.arbor.entity.FlowSnapshot">
+        SELECT * FROM flow_snapshot WHERE flow_id = #{flowId} ORDER BY version DESC LIMIT 1
+    </select>
+
+    <insert id="insertSnapshot" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO flow_snapshot (flow_id, version, name, description, status, node_count, snapshot_time)
+        VALUES (#{flowId}, #{version}, #{name}, #{description}, #{status}, #{nodeCount}, NOW())
+    </insert>
+
+    <delete id="deleteByFlowId">DELETE FROM flow_snapshot WHERE flow_id = #{flowId}</delete>
+
+    <insert id="insertNodeSnapshots">
+        INSERT INTO flow_node_snapshot (snapshot_id, node_id, flow_id, node_code, node_name, node_type, sort_order, config, branch_of)
+        VALUES
+        <foreach collection="list" item="n" separator=",">
+            (#{n.snapshotId}, #{n.nodeId}, #{n.flowId}, #{n.nodeCode}, #{n.nodeName}, #{n.nodeType}, #{n.sortOrder}, #{n.config}, #{n.branchOf})
+        </foreach>
+    </insert>
+
+    <select id="selectBySnapshotId" resultType="com.arbor.entity.FlowNodeSnapshot">
+        SELECT * FROM flow_node_snapshot WHERE snapshot_id = #{snapshotId} ORDER BY sort_order
+    </select>
+
+    <select id="countExecutionLogByFlowId" resultType="int">
+        SELECT COUNT(*) FROM execution_log WHERE flow_id = #{flowId}
+    </select>
+
+    <select id="countNodeLogByNodeId" resultType="int">
+        SELECT COUNT(*) FROM execution_node_log WHERE node_id = #{nodeId}
+    </select>
+</mapper>

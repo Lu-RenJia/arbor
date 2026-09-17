@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.DbScriptMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.DbScript">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="datasource_id" property="datasourceId"/>
+        <result column="sql_content" property="sqlContent"/>
+        <result column="return_limit" property="returnLimit"/>
+        <result column="query_timeout" property="queryTimeout"/>
+        <result column="remark" property="remark"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM db_script
+        <where>
+            AND flow_id IS NULL
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY ${sortField} ${sortOrder}
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM db_script WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO db_script (name, datasource_id, sql_content, return_limit, query_timeout, remark, flow_id, uid)
+        VALUES (#{name}, #{datasourceId}, #{sqlContent}, #{returnLimit}, #{queryTimeout}, #{remark}, #{flowId}, #{uid})
+    </insert>
+
+    <update id="update">
+        UPDATE db_script
+        SET name = #{name}, datasource_id = #{datasourceId}, sql_content = #{sqlContent}, return_limit = #{returnLimit}, query_timeout = #{queryTimeout}, remark = #{remark}, flow_id = #{flowId}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM db_script WHERE id = #{id}
+    </delete>
+
+    <!-- 引用追踪：查询全部数据库脚本 -->
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM db_script ORDER BY id
+    </select>
+
+    <!-- 引用追踪：按数据源ID查数据库脚本 -->
+    <select id="selectByDatasourceId" resultMap="BaseResultMap">
+        SELECT * FROM db_script WHERE datasource_id = #{datasourceId}
+    </select>
+
+    <!-- 内联资源：按流程ID查询 -->
+    <select id="selectByFlowId" resultMap="BaseResultMap">
+        SELECT * FROM db_script WHERE flow_id = #{flowId} ORDER BY id
+    </select>
+
+    <!-- 内联资源：流程删除时级联清理 -->
+    <delete id="deleteByFlowId">
+        DELETE FROM db_script WHERE flow_id = #{flowId}
+    </delete>
+
+</mapper>

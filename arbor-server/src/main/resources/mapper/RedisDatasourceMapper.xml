@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.RedisDatasourceMapper">
+    <select id="selectPage" resultType="com.arbor.entity.RedisDatasource">
+        SELECT id, name, host, port, password, db, remark, create_time, update_time
+        FROM redis_datasource
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY ${sortField} ${sortOrder}
+    </select>
+    <select id="selectById" resultType="com.arbor.entity.RedisDatasource">
+        SELECT id, name, host, port, password, db, remark, create_time, update_time
+        FROM redis_datasource WHERE id = #{id}
+    </select>
+    <!-- 批量按ID查询（只取 id/name，避免把密码密文带进列表链路） -->
+    <select id="selectByIds" resultType="com.arbor.entity.RedisDatasource">
+        SELECT id, name FROM redis_datasource
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO redis_datasource (name, host, port, password, db, remark, uid)
+        VALUES (#{name}, #{host}, #{port}, #{password}, #{db}, #{remark}, #{uid})
+    </insert>
+    <update id="update">
+        UPDATE redis_datasource SET name=#{name}, host=#{host}, port=#{port},
+        password=#{password}, db=#{db}, remark=#{remark} WHERE id=#{id}
+    </update>
+    <delete id="deleteById">DELETE FROM redis_datasource WHERE id=#{id}</delete>
+</mapper>

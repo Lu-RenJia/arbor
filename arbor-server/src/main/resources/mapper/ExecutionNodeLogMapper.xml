@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.ExecutionNodeLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.ExecutionNodeLog">
+        <id column="id" property="id"/>
+        <result column="execution_log_id" property="executionLogId"/>
+        <result column="node_id" property="nodeId"/>
+        <result column="node_code" property="nodeCode"/>
+        <result column="node_name" property="nodeName"/>
+        <result column="node_type" property="nodeType"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="status" property="status"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="duration" property="duration"/>
+        <result column="input_params" property="inputParams"/>
+        <result column="output_result" property="outputResult"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <select id="selectByExecutionLogId" resultMap="BaseResultMap">
+        SELECT * FROM execution_node_log WHERE execution_log_id = #{executionLogId} ORDER BY sort_order
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO execution_node_log (execution_log_id, node_id, node_code, node_name, node_type, sort_order, status, start_time, end_time, duration, input_params, output_result, error_message)
+        VALUES (#{executionLogId}, #{nodeId}, #{nodeCode}, #{nodeName}, #{nodeType}, #{sortOrder}, #{status}, #{startTime}, #{endTime}, #{duration}, #{inputParams}, #{outputResult}, #{errorMessage})
+    </insert>
+
+</mapper>

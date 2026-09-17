@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.ExecutionScriptLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.ExecutionScriptLog">
+        <id column="id" property="id"/>
+        <result column="execution_log_id" property="executionLogId"/>
+        <result column="node_code" property="nodeCode"/>
+        <result column="node_name" property="nodeName"/>
+        <result column="log_level" property="logLevel"/>
+        <result column="logger" property="logger"/>
+        <result column="log_time" property="logTime"/>
+        <result column="message" property="message"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="user_id" property="userId"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <select id="selectByExecutionLogId" resultMap="BaseResultMap">
+        SELECT * FROM execution_script_log WHERE execution_log_id = #{executionLogId} ORDER BY sort_order, id
+    </select>
+
+    <insert id="insertBatch">
+        INSERT INTO execution_script_log (execution_log_id, node_code, node_name, log_level, logger, log_time, message, sort_order, user_id)
+        VALUES
+        <foreach collection="list" item="i" separator=",">
+            (#{i.executionLogId}, #{i.nodeCode}, #{i.nodeName}, #{i.logLevel}, #{i.logger}, #{i.logTime}, #{i.message}, #{i.sortOrder}, #{i.userId})
+        </foreach>
+    </insert>
+
+</mapper>

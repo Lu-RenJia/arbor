@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.RoleMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.Role">
+        <id column="id" property="id"/>
+        <result column="code" property="code"/>
+        <result column="role_key" property="roleKey"/>
+        <result column="name" property="name"/>
+        <result column="remark" property="remark"/>
+        <result column="role_sort" property="roleSort"/>
+        <result column="data_scope" property="dataScope"/>
+        <result column="status" property="status"/>
+        <result column="del_flag" property="delFlag"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, code, role_key, name, remark, role_sort, data_scope, status, del_flag, create_time, update_time
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM role WHERE del_flag = '0' ORDER BY role_sort ASC, id ASC
+    </select>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM role WHERE del_flag = '0' ORDER BY role_sort ASC, id ASC
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM role WHERE id = #{id}
+    </select>
+
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM role WHERE code = #{code} AND del_flag = '0'
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO role (code, role_key, name, remark, role_sort, status)
+        VALUES (#{code}, #{roleKey}, #{name}, #{remark}, #{roleSort}, #{status})
+    </insert>
+
+    <update id="update">
+        UPDATE role
+        SET code = #{code}, role_key = #{roleKey}, name = #{name}, remark = #{remark},
+            role_sort = #{roleSort}, status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <update id="deleteById">
+        UPDATE role SET del_flag = '2' WHERE id = #{id}
+    </update>
+
+</mapper>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.FileResourceMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.FileResource">
+        <id column="id" property="id"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="file_name" property="fileName"/>
+        <result column="file_path" property="filePath"/>
+        <result column="file_size" property="fileSize"/>
+        <result column="content_type" property="contentType"/>
+        <result column="file_type" property="fileType"/>
+        <result column="description" property="description"/>
+        <result column="user_id" property="userId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="flow_name" property="flowName"/>
+        <result column="app_names" property="appNames"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT fr.*, f.name AS flow_name
+        FROM file_resource fr
+        LEFT JOIN flow f ON f.id = fr.flow_id
+        WHERE fr.id = #{id}
+    </select>
+
+    <select id="selectByFlowId" resultMap="BaseResultMap">
+        SELECT * FROM file_resource WHERE flow_id = #{flowId} AND file_type = 'EXAMPLE' LIMIT 1
+    </select>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT fr.*, f.name AS flow_name,
+               (SELECT GROUP_CONCAT(DISTINCT a.name SEPARATOR ', ')
+                FROM application a WHERE a.flow_id = fr.flow_id) AS app_names
+        FROM file_resource fr
+        LEFT JOIN flow f ON f.id = fr.flow_id
+        <where>
+            <if test="fileName != null and fileName != ''">
+                AND fr.file_name LIKE CONCAT('%', #{fileName}, '%')
+            </if>
+            <if test="flowId != null">
+                AND fr.flow_id = #{flowId}
+            </if>
+            <if test="userId != null">
+                AND fr.user_id = #{userId}
+            </if>
+        </where>
+        ORDER BY fr.update_time DESC, fr.id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(*)
+        FROM file_resource fr
+        <where>
+            <if test="fileName != null and fileName != ''">
+                AND fr.file_name LIKE CONCAT('%', #{fileName}, '%')
+            </if>
+            <if test="flowId != null">
+                AND fr.flow_id = #{flowId}
+            </if>
+            <if test="userId != null">
+                AND fr.user_id = #{userId}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO file_resource (flow_id, file_name, file_path, file_size, content_type, file_type, description, user_id, create_time, update_time)
+        VALUES (#{flowId}, #{fileName}, #{filePath}, #{fileSize}, #{contentType}, #{fileType}, #{description}, #{userId}, NOW(), NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE file_resource
+        SET file_name = #{fileName}, file_path = #{filePath}, file_size = #{fileSize},
+            content_type = #{contentType}, description = #{description}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM file_resource WHERE id = #{id}
+    </delete>
+
+</mapper>

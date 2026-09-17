@@ -1,0 +1,101 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: arbor-server
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+  # MySQL 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/arbor1?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 30000
+
+  # Redis 配置
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+      password: ${REDIS_PASSWORD}
+      database: 1
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+          max-wait: 3000ms
+
+  # Jackson 配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+# Arbor 平台配置
+arbor:
+  auth:
+    skip: false   # 开发模式跳过 JWT 认证（设为 true 时所有请求都是 admin，多租户失效）
+  cors:
+    # 允许的跨域来源（生产环境同源部署无需 CORS；开发环境默认放行本机 vite 端口）
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGINS:http://localhost:*,http://127.0.0.1:*}
+  token:
+    expire-time: 30            # token 过期时间（分钟），默认30
+    refresh-threshold: 20      # 剩余不足此分钟数时自动续期
+  sql:
+    max-rows: 200               # Groovy SQL 查询最大返回行数，超出截断
+    query-timeout-seconds: 5     # SQL 默认超时（秒）
+    query-timeout-max-seconds: 180  # SQL 最大超时（秒）
+  groovy:
+    timeout-seconds: 60          # Groovy 脚本默认超时（秒）
+    timeout-max-seconds: 300     # Groovy 最大超时（秒）
+  api:
+    timeout-seconds: 10          # 接口调用默认超时（秒）
+    timeout-max-seconds: 30      # 接口最大超时（秒）
+  file:
+    storage-path: D:/data/arbor/files   # 文件存储根路径（示例文件等持久存储）
+    output-path: D:/data/arbor/output   # 输出文件临时路径（执行结果下载缓存，可定期清理）
+    max-upload-size: 10MB        # 最大上传文件大小
+
+# JWT 配置（内置默认值仅供开发/内网使用；生产建议用环境变量 JWT_SECRET 覆盖，HMAC-SHA 要求至少 32 字节）
+jwt:
+  secret: arbor-jwt-secret-key-2026-must-be-at-least-256-bits-long
+  expiration: 86400000  # 24小时，单位毫秒
+
+# AES 加密配置（用于数据源密码加密存储，内置默认值仅供开发/内网使用，生产建议用环境变量 AES_SECRET_KEY 覆盖）
+aes:
+  secret-key: arbor-2026!@  # 16 字节（128 位）
+# 注意：密钥与历史已加密的数据源密码绑定，更换密钥前必须先解密重加密存量数据
+
+# SpringDoc OpenAPI 文档（生产环境设 SPRINGDOC_API_DOCS_ENABLED=false 关闭）
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:true}
+  swagger-ui:
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:true}
+    display-request-duration: true
+
+# MyBatis 配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml      # XML Mapper 文件路径
+  configuration:
+    map-underscore-to-camel-case: true          # 自动映射 create_time → createTime
+  type-aliases-package: com.arbor.entity          # 实体类别名扫描
+
+# 日志配置
+logging:
+  level:
+    com.arbor: debug
+    org.springframework.security: info
+    com.zaxxer.hikari: debug
+    org.springframework.jdbc: debug

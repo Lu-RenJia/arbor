@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.FlowNodeMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.FlowNode">
+        <id column="id" property="id"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="node_code" property="nodeCode"/>
+        <result column="node_name" property="nodeName"/>
+        <result column="node_type" property="nodeType"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="config" property="config"/>
+        <result column="example_output" property="exampleOutput"/>
+        <result column="branch_of" property="branchOf"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectByFlowId" resultMap="BaseResultMap">
+        SELECT * FROM flow_node WHERE flow_id = #{flowId} ORDER BY sort_order
+    </select>
+
+    <select id="selectByFlowIdIgnoreTenant" resultMap="BaseResultMap">
+        SELECT * FROM flow_node WHERE flow_id = #{flowId} ORDER BY sort_order
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM flow_node WHERE id = #{id}
+    </select>
+
+    <select id="selectByIds" resultMap="BaseResultMap">
+        SELECT * FROM flow_node WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO flow_node (flow_id, node_code, node_name, node_type, sort_order, config, example_output, branch_of)
+        VALUES (#{flowId}, #{nodeCode}, #{nodeName}, #{nodeType}, #{sortOrder}, #{config}, #{exampleOutput}, #{branchOf})
+    </insert>
+
+    <insert id="insertBatch" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO flow_node (flow_id, node_code, node_name, node_type, sort_order, config, example_output, branch_of) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.flowId}, #{item.nodeCode}, #{item.nodeName}, #{item.nodeType}, #{item.sortOrder}, #{item.config}, #{item.exampleOutput}, #{item.branchOf})
+        </foreach>
+    </insert>
+
+    <update id="update">
+        UPDATE flow_node
+        SET node_code = #{nodeCode}, node_name = #{nodeName}, node_type = #{nodeType},
+            sort_order = #{sortOrder}, config = #{config}, example_output = #{exampleOutput}, branch_of = #{branchOf}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByFlowId">
+        DELETE FROM flow_node WHERE flow_id = #{flowId}
+    </delete>
+
+    <!-- 引用追踪：按节点类型 + config JSON 字段精准查找 -->
+    <select id="selectByConfigRef" resultMap="BaseResultMap">
+        SELECT * FROM flow_node
+        WHERE node_type = #{nodeType}
+          AND JSON_UNQUOTE(JSON_EXTRACT(config, CONCAT('$.', #{jsonKey}))) = #{refId}
+    </select>
+
+</mapper>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.ExecutionLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.ExecutionLog">
+        <id column="id" property="id"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="flow_name" property="flowName"/>
+        <result column="user_id" property="userId"/>
+        <result column="app_id" property="appId"/>
+        <result column="flow_snapshot_id" property="flowSnapshotId"/>
+        <result column="input_params" property="inputParams"/>
+        <result column="execute_type" property="executeType"/>
+        <result column="source" property="source"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="executor_id" property="executorId"/>
+        <result column="status" property="status"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="duration" property="duration"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="stop_type" property="stopType"/>
+        <result column="create_time" property="createTime"/>
+        <result column="owner_name" property="ownerName"/>
+        <result column="executor_name" property="executorName"/>
+    </resultMap>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT el.*,
+               ou.username AS owner_name,
+               COALESCE(eu.username, uu.username) AS executor_name
+        FROM execution_log el
+        LEFT JOIN user ou ON ou.id = el.owner_id
+        LEFT JOIN user eu ON eu.id = el.executor_id
+        LEFT JOIN user uu ON uu.id = el.user_id
+        <where>
+            <if test="flowName != null and flowName != ''">
+                AND el.flow_name LIKE CONCAT('%', #{flowName}, '%')
+            </if>
+            <if test="executeType != null and executeType != ''">
+                AND el.execute_type = #{executeType}
+            </if>
+            <if test="status != null and status != ''">
+                AND el.status = #{status}
+            </if>
+            <if test="source != null and source != ''">
+                AND el.source = #{source}
+            </if>
+            <if test="ownerId != null">
+                AND el.owner_id = #{ownerId}
+            </if>
+            <if test="executorId != null">
+                AND el.executor_id = #{executorId}
+            </if>
+            <if test="startTime != null">
+                AND el.start_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND el.start_time &lt;= #{endTime}
+            </if>
+            <!-- 手动租户过滤：admin 传 null 跳过，普通用户传入 userId -->
+            <if test="filterUserId != null">
+                AND el.user_id = #{filterUserId}
+            </if>
+        </where>
+        ORDER BY el.id DESC
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT el.*,
+               COALESCE(eu.username, uu.username) AS executor_name,
+               ou.username AS owner_name
+        FROM execution_log el
+        LEFT JOIN user ou ON ou.id = el.owner_id
+        LEFT JOIN user eu ON eu.id = el.executor_id
+        LEFT JOIN user uu ON uu.id = el.user_id
+        WHERE el.id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO execution_log (flow_id, flow_name, user_id, app_id, flow_snapshot_id, input_params, execute_type, source, owner_id, executor_id, status, start_time, end_time, duration, error_message, stop_type)
+        VALUES (#{flowId}, #{flowName}, #{userId}, #{appId}, #{flowSnapshotId}, #{inputParams}, #{executeType}, #{source}, #{ownerId}, #{executorId}, #{status}, #{startTime}, #{endTime}, #{duration}, #{errorMessage}, #{stopType})
+    </insert>
+
+</mapper>

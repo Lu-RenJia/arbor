@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.AuditLogMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO audit_log (user_id, username, module_name, action, description, detail,
+                               method, uri, ip, success, error_msg)
+        VALUES (#{userId}, #{username}, #{moduleName}, #{action}, #{description}, #{detail},
+                #{method}, #{uri}, #{ip}, #{success}, #{errorMsg})
+    </insert>
+
+    <sql id="pageWhere">
+        <where>
+            <if test="moduleName != null and moduleName != ''">
+                AND module_name = #{moduleName}
+            </if>
+            <if test="username != null and username != ''">
+                AND username = #{username}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (description LIKE CONCAT('%', #{keyword}, '%') OR detail LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectPage" resultType="com.arbor.entity.AuditLog">
+        SELECT id, user_id, username, module_name, action, description, detail,
+               method, uri, ip, success, error_msg, create_time
+        FROM audit_log
+        <include refid="pageWhere"/>
+        ORDER BY id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(*) FROM audit_log
+        <include refid="pageWhere"/>
+    </select>
+
+</mapper>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.FieldMappingMapper">
+
+    <sql id="Base_Column_List">
+        id, flow_id, field_name, field_label, mapping_json, sort_order, is_enabled, remark, create_time, update_time
+    </sql>
+
+    <select id="selectByFlowId" resultType="com.arbor.entity.FieldMapping">
+        SELECT <include refid="Base_Column_List"/>
+        FROM field_mapping WHERE flow_id = #{flowId}
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <select id="selectById" resultType="com.arbor.entity.FieldMapping">
+        SELECT <include refid="Base_Column_List"/>
+        FROM field_mapping WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO field_mapping (flow_id, field_name, field_label, mapping_json, sort_order, is_enabled, remark)
+        VALUES (#{flowId}, #{fieldName}, #{fieldLabel}, #{mappingJson}, #{sortOrder}, #{isEnabled}, #{remark})
+    </insert>
+
+    <update id="update">
+        UPDATE field_mapping
+        SET field_name = #{fieldName}, field_label = #{fieldLabel},
+            mapping_json = #{mappingJson}, sort_order = #{sortOrder},
+            is_enabled = #{isEnabled}, remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM field_mapping WHERE id = #{id}
+    </delete>
+
+</mapper>

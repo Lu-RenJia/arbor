@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.MenuMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.Menu">
+        <id column="id" property="id"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="name" property="name"/>
+        <result column="path" property="path"/>
+        <result column="component" property="component"/>
+        <result column="query" property="query"/>
+        <result column="is_frame" property="isFrame"/>
+        <result column="route_name" property="routeName"/>
+        <result column="menu_type" property="menuType"/>
+        <result column="is_cache" property="isCache"/>
+        <result column="icon" property="icon"/>
+        <result column="permission_code" property="permissionCode"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="visible" property="visible"/>
+        <result column="status" property="status"/>
+        <result column="del_flag" property="delFlag"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, parent_id, name, path, component, query, is_frame, route_name, menu_type, is_cache,
+        icon, permission_code, sort_order, visible, status, del_flag, create_time, update_time
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM menu WHERE visible = 1 AND del_flag = '0'
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM menu WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO menu (parent_id, name, path, component, query, is_frame, route_name, menu_type,
+            is_cache, icon, permission_code, sort_order, visible, status)
+        VALUES (#{parentId}, #{name}, #{path}, #{component}, #{query}, #{isFrame}, #{routeName}, #{menuType},
+            #{isCache}, #{icon}, #{permissionCode}, #{sortOrder}, #{visible}, #{status})
+    </insert>
+
+    <update id="update">
+        UPDATE menu
+        SET parent_id = #{parentId}, name = #{name}, path = #{path}, component = #{component},
+            query = #{query}, is_frame = #{isFrame}, route_name = #{routeName}, menu_type = #{menuType},
+            is_cache = #{isCache}, icon = #{icon}, permission_code = #{permissionCode},
+            sort_order = #{sortOrder}, visible = #{visible}, status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <update id="deleteById">
+        UPDATE menu SET del_flag = '2' WHERE id = #{id}
+    </update>
+
+    <select id="selectByPermissionCodes" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM menu
+        WHERE visible = 1 AND del_flag = '0' AND status = '0'
+          AND menu_type IN ('M', 'C')
+          AND (permission_code IS NULL OR permission_code IN
+            <foreach collection="codes" item="code" open="(" separator="," close=")">
+                #{code}
+            </foreach>)
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <select id="selectPermissionCodesByRoleId" resultType="string">
+        SELECT p.code
+        FROM permission p
+        INNER JOIN role_permission rp ON p.id = rp.permission_id
+        WHERE rp.role_id = #{roleId}
+    </select>
+
+    <select id="countByParentId" resultType="int">
+        SELECT COUNT(*) FROM menu WHERE parent_id = #{parentId} AND del_flag = '0'
+    </select>
+
+    <select id="countRoleRefByPermissionCode" resultType="int">
+        SELECT COUNT(*) FROM role_permission rp
+        INNER JOIN permission p ON rp.permission_id = p.id
+        WHERE p.code = #{permissionCode}
+    </select>
+
+</mapper>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.GlobalParamValueMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.GlobalParamValue">
+        <id column="id" property="id"/>
+        <result column="param_id" property="paramId"/>
+        <result column="env_id" property="envId"/>
+        <result column="param_value" property="paramValue"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, param_id, env_id, param_value, create_time, update_time
+    </sql>
+
+    <!-- 按参数ID查询所有环境值 -->
+    <select id="selectByParamId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM global_param_value
+        WHERE param_id = #{paramId}
+    </select>
+
+    <!-- 按环境ID查询所有参数值 -->
+    <select id="selectByEnvId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM global_param_value
+        WHERE env_id = #{envId}
+    </select>
+
+    <!-- 批量按参数ID查询 -->
+    <select id="selectByParamIds" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM global_param_value
+        WHERE param_id IN
+        <foreach collection="paramIds" item="pid" open="(" separator="," close=")">
+            #{pid}
+        </foreach>
+    </select>
+
+    <!-- 按参数ID+环境ID查单条 -->
+    <select id="selectByParamAndEnv" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM global_param_value
+        WHERE param_id = #{paramId} AND env_id = #{envId}
+    </select>
+
+    <!-- 按环境ID查询参数值Map (param_id → param_value 含id/时间) -->
+    <select id="selectValueMapByEnvId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM global_param_value
+        WHERE env_id = #{envId}
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO global_param_value (param_id, env_id, param_value)
+        VALUES (#{paramId}, #{envId}, #{paramValue})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE global_param_value
+        SET param_value = #{paramValue}
+        WHERE param_id = #{paramId} AND env_id = #{envId}
+    </update>
+
+    <!-- 按参数ID+环境ID删除 -->
+    <delete id="deleteByParamAndEnv">
+        DELETE FROM global_param_value WHERE param_id = #{paramId} AND env_id = #{envId}
+    </delete>
+
+    <!-- 按参数ID删除所有环境值 -->
+    <delete id="deleteByParamId">
+        DELETE FROM global_param_value WHERE param_id = #{paramId}
+    </delete>
+
+</mapper>

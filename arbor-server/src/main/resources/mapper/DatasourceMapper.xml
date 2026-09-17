@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.DatasourceMapper">
+
+    <!-- 分页查询 -->
+    <select id="selectPage" resultType="com.arbor.entity.Datasource">
+        SELECT id, user_id, name, db_type, host, port, database_name, username, password, remark, pool_min_idle, pool_max_size, pool_idle_timeout_sec, pool_max_lifetime_sec, pool_conn_timeout_sec, create_time, update_time
+        FROM datasource
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY ${sortField} ${sortOrder}
+    </select>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultType="com.arbor.entity.Datasource">
+        SELECT id, user_id, name, db_type, host, port, database_name, username, password, remark, pool_min_idle, pool_max_size, pool_idle_timeout_sec, pool_max_lifetime_sec, pool_conn_timeout_sec, create_time, update_time
+        FROM datasource
+        WHERE id = #{id}
+    </select>
+
+    <!-- 批量按ID查询（只取 id/name，避免把密码密文带进列表链路） -->
+    <select id="selectByIds" resultType="com.arbor.entity.Datasource">
+        SELECT id, name FROM datasource
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
+    <!-- 插入（自动回填主键） -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO datasource (name, db_type, host, port, database_name, username, password, remark,
+            pool_min_idle, pool_max_size, pool_idle_timeout_sec, pool_max_lifetime_sec, pool_conn_timeout_sec, uid)
+        VALUES (#{name}, #{dbType}, #{host}, #{port}, #{databaseName}, #{username}, #{password}, #{remark},
+            #{poolMinIdle}, #{poolMaxSize}, #{poolIdleTimeoutSec}, #{poolMaxLifetimeSec}, #{poolConnTimeoutSec}, #{uid})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE datasource
+        SET name = #{name},
+            db_type = #{dbType},
+            host = #{host},
+            port = #{port},
+            database_name = #{databaseName},
+            username = #{username},
+            password = #{password},
+            remark = #{remark},
+            pool_min_idle = #{poolMinIdle},
+            pool_max_size = #{poolMaxSize},
+            pool_idle_timeout_sec = #{poolIdleTimeoutSec},
+            pool_max_lifetime_sec = #{poolMaxLifetimeSec},
+            pool_conn_timeout_sec = #{poolConnTimeoutSec}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteById">
+        DELETE FROM datasource WHERE id = #{id}
+    </delete>
+
+    <!-- 引用追踪：查询全部数据源 -->
+    <select id="selectAll" resultType="com.arbor.entity.Datasource">
+        SELECT id, user_id, name, db_type, host, port, database_name, username, password, remark, pool_min_idle, pool_max_size, pool_idle_timeout_sec, pool_max_lifetime_sec, pool_conn_timeout_sec, create_time, update_time
+        FROM datasource ORDER BY id
+    </select>
+
+</mapper>

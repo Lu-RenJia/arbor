@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.ImportExportMapper">
+
+    <!-- ==================== resultMap ==================== -->
+    <resultMap id="FlowMap" type="com.arbor.entity.Flow">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="user_id" property="userId"/>
+        <result column="status" property="status"/>
+        <result column="node_count" property="nodeCount"/>
+        <result column="uid" property="uid"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="AppMap" type="com.arbor.entity.Application">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="user_id" property="userId"/>
+        <result column="env_id" property="envId"/>
+        <result column="input_params" property="inputParams"/>
+        <result column="remark" property="remark"/>
+        <result column="uid" property="uid"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="DbScriptMap" type="com.arbor.entity.DbScript">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="datasource_id" property="datasourceId"/>
+        <result column="sql_content" property="sqlContent"/>
+        <result column="return_limit" property="returnLimit"/>
+        <result column="query_timeout" property="queryTimeout"/>
+        <result column="remark" property="remark"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="uid" property="uid"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="ProgramScriptMap" type="com.arbor.entity.ProgramScript">
+        <id column="id" property="id"/>
+        <result column="script_id" property="scriptId"/>
+        <result column="name" property="name"/>
+        <result column="script_content" property="scriptContent"/>
+        <result column="query_timeout" property="queryTimeout"/>
+        <result column="remark" property="remark"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="uid" property="uid"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="ApiConfigMap" type="com.arbor.entity.ApiConfig">
+        <id column="id" property="id"/>
+        <result column="api_id" property="apiId"/>
+        <result column="name" property="name"/>
+        <result column="method" property="method"/>
+        <result column="url" property="url"/>
+        <result column="timeout" property="timeout"/>
+        <result column="headers" property="headers"/>
+        <result column="params" property="params"/>
+        <result column="body_type" property="bodyType"/>
+        <result column="body_content" property="bodyContent"/>
+        <result column="response_example" property="responseExample"/>
+        <result column="remark" property="remark"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="uid" property="uid"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="RedisScriptMap" type="com.arbor.entity.RedisScript">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <!-- 下面两列必须显式映射：本文件全部用 SELECT * + resultMap，
+             不写就会静默丢掉 flowId/prefixId，导致导出的内联配置变成全局、前缀绑定丢失 -->
+        <result column="flow_id" property="flowId"/>
+        <result column="prefix_id" property="prefixId"/>
+        <result column="datasource_id" property="datasourceId"/>
+        <result column="command" property="command"/>
+        <result column="redis_key" property="redisKey"/>
+        <result column="redis_value" property="redisValue"/>
+        <result column="ttl" property="ttl"/>
+        <result column="ttl_unit" property="ttlUnit"/>
+        <result column="remark" property="remark"/>
+        <result column="uid" property="uid"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="DatasourceMap" type="com.arbor.entity.Datasource">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="db_type" property="dbType"/>
+        <result column="uid" property="uid"/>
+    </resultMap>
+
+    <resultMap id="RedisDatasourceMap" type="com.arbor.entity.RedisDatasource">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="uid" property="uid"/>
+    </resultMap>
+
+    <!-- ==================== flow ==================== -->
+    <select id="selectFlowById" resultMap="FlowMap">
+        SELECT * FROM flow WHERE id = #{id}
+    </select>
+    <select id="selectFlowByUid" resultMap="FlowMap">
+        SELECT * FROM flow WHERE uid = #{uid}
+    </select>
+    <update id="updateFlowUid">
+        UPDATE flow SET uid = #{uid} WHERE id = #{id}
+    </update>
+    <insert id="insertFlow" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO flow (name, description, status, node_count, uid)
+        VALUES (#{name}, #{description}, #{status}, #{nodeCount}, #{uid})
+    </insert>
+    <update id="overwriteFlow">
+        UPDATE flow SET name = #{name}, description = #{description},
+                        status = #{status}, node_count = #{nodeCount}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== application ==================== -->
+    <select id="selectAppById" resultMap="AppMap">
+        SELECT * FROM application WHERE id = #{id}
+    </select>
+    <select id="selectAppByUid" resultMap="AppMap">
+        SELECT * FROM application WHERE uid = #{uid}
+    </select>
+    <update id="updateAppUid">
+        UPDATE application SET uid = #{uid} WHERE id = #{id}
+    </update>
+    <insert id="insertApp" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO application (name, flow_id, env_id, input_params, remark, uid)
+        VALUES (#{name}, #{flowId}, #{envId}, #{inputParams}, #{remark}, #{uid})
+    </insert>
+    <update id="overwriteApp">
+        UPDATE application SET name = #{name}, flow_id = #{flowId}, env_id = #{envId},
+                               input_params = #{inputParams}, remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== db_script ==================== -->
+    <select id="selectDbScriptById" resultMap="DbScriptMap">
+        SELECT * FROM db_script WHERE id = #{id}
+    </select>
+    <select id="selectDbScriptByUid" resultMap="DbScriptMap">
+        SELECT * FROM db_script WHERE uid = #{uid}
+    </select>
+    <select id="selectDbScriptByIds" resultMap="DbScriptMap">
+        SELECT * FROM db_script WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+    <select id="selectDbScriptsByFlowId" resultMap="DbScriptMap">
+        SELECT * FROM db_script WHERE flow_id = #{flowId} ORDER BY id
+    </select>
+    <update id="updateDbScriptUid">
+        UPDATE db_script SET uid = #{uid} WHERE id = #{id}
+    </update>
+    <insert id="insertDbScript" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO db_script (name, datasource_id, sql_content, return_limit, query_timeout, remark, flow_id, uid)
+        VALUES (#{name}, #{datasourceId}, #{sqlContent}, #{returnLimit}, #{queryTimeout}, #{remark}, #{flowId}, #{uid})
+    </insert>
+    <update id="overwriteDbScript">
+        UPDATE db_script SET name = #{name}, datasource_id = #{datasourceId}, sql_content = #{sqlContent},
+                             return_limit = #{returnLimit}, query_timeout = #{queryTimeout}, remark = #{remark}, flow_id = #{flowId}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== program_script ==================== -->
+    <select id="selectProgramScriptById" resultMap="ProgramScriptMap">
+        SELECT * FROM program_script WHERE id = #{id}
+    </select>
+    <select id="selectProgramScriptByUid" resultMap="ProgramScriptMap">
+        SELECT * FROM program_script WHERE uid = #{uid}
+    </select>
+    <select id="selectProgramScriptByScriptId" resultMap="ProgramScriptMap">
+        SELECT * FROM program_script WHERE script_id = #{scriptId}
+    </select>
+    <select id="selectProgramScriptByIds" resultMap="ProgramScriptMap">
+        SELECT * FROM program_script WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+    <select id="selectProgramScriptsByFlowId" resultMap="ProgramScriptMap">
+        SELECT * FROM program_script WHERE flow_id = #{flowId} ORDER BY id
+    </select>
+    <update id="updateProgramScriptUid">
+        UPDATE program_script SET uid = #{uid} WHERE id = #{id}
+    </update>
+    <insert id="insertProgramScript" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO program_script (script_id, name, script_content, query_timeout, remark, flow_id, uid)
+        VALUES (#{scriptId}, #{name}, #{scriptContent}, #{queryTimeout}, #{remark}, #{flowId}, #{uid})
+    </insert>
+    <update id="overwriteProgramScript">
+        UPDATE program_script SET name = #{name}, script_content = #{scriptContent},
+                                  query_timeout = #{queryTimeout}, remark = #{remark}, flow_id = #{flowId}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== api_config ==================== -->
+    <select id="selectApiConfigById" resultMap="ApiConfigMap">
+        SELECT * FROM api_config WHERE id = #{id}
+    </select>
+    <select id="selectApiConfigByUid" resultMap="ApiConfigMap">
+        SELECT * FROM api_config WHERE uid = #{uid}
+    </select>
+    <select id="selectApiConfigByIds" resultMap="ApiConfigMap">
+        SELECT * FROM api_config WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+    <select id="selectApiConfigsByFlowId" resultMap="ApiConfigMap">
+        SELECT * FROM api_config WHERE flow_id = #{flowId} ORDER BY id
+    </select>
+    <update id="updateApiConfigUid">
+        UPDATE api_config SET uid = #{uid} WHERE id = #{id}
+    </update>
+    <insert id="insertApiConfig" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO api_config (api_id, name, method, url, timeout, headers, params, body_type, body_content, remark, flow_id, uid)
+        VALUES (#{apiId}, #{name}, #{method}, #{url}, #{timeout}, #{headers}, #{params}, #{bodyType}, #{bodyContent}, #{remark}, #{flowId}, #{uid})
+    </insert>
+    <update id="overwriteApiConfig">
+        UPDATE api_config SET name = #{name}, method = #{method}, url = #{url}, timeout = #{timeout},
+                              headers = #{headers}, params = #{params}, body_type = #{bodyType},
+                              body_content = #{bodyContent}, remark = #{remark}, flow_id = #{flowId}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== redis_script ==================== -->
+    <select id="selectRedisScriptById" resultMap="RedisScriptMap">
+        SELECT * FROM redis_script WHERE id = #{id}
+    </select>
+    <select id="selectRedisScriptByUid" resultMap="RedisScriptMap">
+        SELECT * FROM redis_script WHERE uid = #{uid}
+    </select>
+    <select id="selectRedisScriptByIds" resultMap="RedisScriptMap">
+        SELECT * FROM redis_script WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+    <select id="selectRedisScriptsByFlowId" resultMap="RedisScriptMap">
+        SELECT * FROM redis_script WHERE flow_id = #{flowId} ORDER BY id
+    </select>
+    <update id="updateRedisScriptUid">
+        UPDATE redis_script SET uid = #{uid} WHERE id = #{id}
+    </update>
+    <insert id="insertRedisScript" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO redis_script (name, flow_id, datasource_id, prefix_id, command, redis_key, redis_value, ttl, ttl_unit, remark, uid)
+        VALUES (#{name}, #{flowId}, #{datasourceId}, #{prefixId}, #{command}, #{redisKey}, #{redisValue}, #{ttl}, #{ttlUnit}, #{remark}, #{uid})
+    </insert>
+    <update id="overwriteRedisScript">
+        UPDATE redis_script SET name = #{name}, flow_id = #{flowId}, datasource_id = #{datasourceId},
+                                prefix_id = #{prefixId}, command = #{command},
+                                redis_key = #{redisKey}, redis_value = #{redisValue}, ttl = #{ttl},
+                                ttl_unit = #{ttlUnit}, remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== datasource（只读，导入不写连接信息） ==================== -->
+    <select id="selectDatasourceById" resultMap="DatasourceMap">
+        SELECT * FROM datasource WHERE id = #{id}
+    </select>
+    <select id="selectDatasourceIdByName" resultMap="DatasourceMap">
+        SELECT * FROM datasource WHERE name = #{name} LIMIT 1
+    </select>
+    <update id="updateDatasourceUid">
+        UPDATE datasource SET uid = #{uid} WHERE id = #{id}
+    </update>
+
+    <!-- ==================== redis_datasource（只读） ==================== -->
+    <select id="selectRedisDatasourceById" resultMap="RedisDatasourceMap">
+        SELECT * FROM redis_datasource WHERE id = #{id}
+    </select>
+    <select id="selectRedisDatasourceByName" resultMap="RedisDatasourceMap">
+        SELECT * FROM redis_datasource WHERE name = #{name} LIMIT 1
+    </select>
+    <update id="updateRedisDatasourceUid">
+        UPDATE redis_datasource SET uid = #{uid} WHERE id = #{id}
+    </update>
+
+</mapper>

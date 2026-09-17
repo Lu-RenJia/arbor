@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.GlobalParamMapper">
+
+    <!-- 分页查询（默认按修改时间倒序） -->
+    <select id="selectPage" resultType="com.arbor.entity.GlobalParam">
+        SELECT id, param_name, remark, create_time, update_time
+        FROM global_param
+        ORDER BY update_time DESC, id DESC
+    </select>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultType="com.arbor.entity.GlobalParam">
+        SELECT id, param_name, remark, create_time, update_time
+        FROM global_param
+        WHERE id = #{id}
+    </select>
+
+    <!-- 根据参数名查询（返回一条） -->
+    <select id="selectByParamName" resultType="com.arbor.entity.GlobalParam">
+        SELECT id, param_name, remark, create_time, update_time
+        FROM global_param
+        WHERE param_name = #{paramName}
+        LIMIT 1
+    </select>
+
+    <!-- 根据参数名查询所有行（跨环境均返回） -->
+    <select id="selectAllByParamName" resultType="com.arbor.entity.GlobalParam">
+        SELECT id, param_name, remark, create_time, update_time
+        FROM global_param
+        WHERE param_name = #{paramName}
+    </select>
+
+    <!-- 插入（自动回填主键） -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO global_param (param_name, remark)
+        VALUES (#{paramName}, #{remark})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE global_param
+        SET param_name = #{paramName},
+            remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteById">
+        DELETE FROM global_param WHERE id = #{id}
+    </delete>
+
+    <!-- 查询所有 -->
+    <select id="selectAll" resultType="com.arbor.entity.GlobalParam">
+        SELECT id, param_name, remark, create_time, update_time
+        FROM global_param
+        ORDER BY id
+    </select>
+
+    <!-- 批量根据ID查询 -->
+    <select id="selectByIds" resultType="com.arbor.entity.GlobalParam">
+        SELECT id, param_name, remark, create_time, update_time
+        FROM global_param
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 批量根据参数名查询（每个参数名返回一条，MIN(id) 取最早创建的那条） -->
+    <select id="selectByParamNames" resultType="com.arbor.entity.GlobalParam">
+        SELECT t.id, t.param_name, t.remark, t.create_time, t.update_time
+        FROM global_param t
+        INNER JOIN (
+            SELECT param_name, MIN(id) AS min_id
+            FROM global_param
+            WHERE param_name IN
+            <foreach collection="names" item="name" open="(" separator="," close=")">
+                #{name}
+            </foreach>
+            GROUP BY param_name
+        ) g ON t.id = g.min_id
+    </select>
+
+    <!-- 查询去重的参数名列表（分页，用于主列表按名称展示）
+         用 GROUP BY 代替 DISTINCT：ORDER BY 时间列时需配合聚合函数（ONLY_FULL_GROUP_BY 下 DISTINCT 无法按非选择列排序），
+         排序列已由 Service 层白名单校验，${} 仅用于拼接列名/方向 -->
+    <select id="selectDistinctParamNames" resultType="string">
+        SELECT param_name FROM global_param
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND param_name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        GROUP BY param_name
+        ORDER BY
+        <choose>
+            <when test='sortField == "create_time"'>MIN(create_time)</when>
+            <when test='sortField == "update_time"'>MAX(update_time)</when>
+            <otherwise>param_name</otherwise>
+        </choose>
+        ${sortOrder}
+    </select>
+
+</mapper>

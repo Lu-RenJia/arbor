@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.DatasourceEnvConfigMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.DatasourceEnvConfig">
+        <id column="id" property="id"/>
+        <result column="datasource_id" property="datasourceId"/>
+        <result column="env_id" property="envId"/>
+        <result column="user_id" property="userId"/>
+        <result column="host" property="host"/>
+        <result column="port" property="port"/>
+        <result column="database_name" property="databaseName"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="pool_min_idle" property="poolMinIdle"/>
+        <result column="pool_max_size" property="poolMaxSize"/>
+        <result column="pool_idle_timeout_sec" property="poolIdleTimeoutSec"/>
+        <result column="pool_max_lifetime_sec" property="poolMaxLifetimeSec"/>
+        <result column="pool_conn_timeout_sec" property="poolConnTimeoutSec"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, datasource_id, env_id, user_id, host, port, database_name, username, password,
+        pool_min_idle, pool_max_size, pool_idle_timeout_sec, pool_max_lifetime_sec, pool_conn_timeout_sec,
+        create_time, update_time
+    </sql>
+
+    <!-- 按数据源ID+环境ID查询 -->
+    <select id="selectByDsAndEnv" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM datasource_env_config
+        WHERE datasource_id = #{datasourceId} AND env_id = #{envId}
+    </select>
+
+    <!-- 按数据源ID查询所有环境配置 -->
+    <select id="selectByDatasourceId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM datasource_env_config
+        WHERE datasource_id = #{datasourceId}
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO datasource_env_config (datasource_id, env_id, user_id, host, port, database_name, username, password,
+            pool_min_idle, pool_max_size, pool_idle_timeout_sec, pool_max_lifetime_sec, pool_conn_timeout_sec)
+        VALUES (#{datasourceId}, #{envId}, #{userId}, #{host}, #{port}, #{databaseName}, #{username}, #{password},
+            #{poolMinIdle}, #{poolMaxSize}, #{poolIdleTimeoutSec}, #{poolMaxLifetimeSec}, #{poolConnTimeoutSec})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE datasource_env_config
+        SET host = #{host}, port = #{port}, database_name = #{databaseName},
+            username = #{username}, password = #{password},
+            pool_min_idle = #{poolMinIdle}, pool_max_size = #{poolMaxSize},
+            pool_idle_timeout_sec = #{poolIdleTimeoutSec}, pool_max_lifetime_sec = #{poolMaxLifetimeSec},
+            pool_conn_timeout_sec = #{poolConnTimeoutSec}
+        WHERE datasource_id = #{datasourceId} AND env_id = #{envId}
+    </update>
+
+    <!-- 按数据源ID+环境ID删除 -->
+    <delete id="deleteByDsAndEnv">
+        DELETE FROM datasource_env_config WHERE datasource_id = #{datasourceId} AND env_id = #{envId}
+    </delete>
+
+</mapper>

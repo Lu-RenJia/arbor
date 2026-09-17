@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.ProgramScriptMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.ProgramScript">
+        <id column="id" property="id"/>
+        <result column="script_id" property="scriptId"/>
+        <result column="name" property="name"/>
+        <result column="script_content" property="scriptContent"/>
+        <result column="query_timeout" property="queryTimeout"/>
+        <result column="remark" property="remark"/>
+        <result column="is_tool" property="isTool"/>
+        <result column="tool_class_name" property="toolClassName"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM program_script
+        <where>
+            AND flow_id IS NULL AND (is_tool IS NULL OR is_tool = 0)
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY ${sortField} ${sortOrder}
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM program_script WHERE id = #{id}
+    </select>
+
+    <select id="selectByScriptId" resultMap="BaseResultMap">
+        SELECT * FROM program_script WHERE script_id = #{scriptId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO program_script (script_id, name, script_content, query_timeout, remark, flow_id, uid)
+        VALUES (#{scriptId}, #{name}, #{scriptContent}, #{queryTimeout}, #{remark}, #{flowId}, #{uid})
+    </insert>
+
+    <update id="update">
+        UPDATE program_script
+        SET name = #{name}, script_content = #{scriptContent}, query_timeout = #{queryTimeout}, remark = #{remark}, flow_id = #{flowId}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM program_script WHERE id = #{id}
+    </delete>
+
+    <!-- ====== 工具类相关 ====== -->
+
+    <select id="selectToolList" resultMap="BaseResultMap">
+        SELECT * FROM program_script WHERE is_tool = 1 ORDER BY update_time DESC, id DESC
+    </select>
+
+    <select id="selectByToolClassName" resultMap="BaseResultMap">
+        SELECT * FROM program_script WHERE tool_class_name = #{className} AND is_tool = 1 LIMIT 1
+    </select>
+
+    <select id="countTools" resultType="int">
+        SELECT COUNT(*) FROM program_script WHERE is_tool = 1
+    </select>
+
+    <insert id="insertTool" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO program_script (script_id, name, script_content, remark, is_tool, tool_class_name, uid)
+        VALUES (#{scriptId}, #{name}, #{scriptContent}, #{remark}, 1, #{toolClassName}, #{uid})
+    </insert>
+
+    <update id="updateTool">
+        UPDATE program_script
+        SET name = #{name}, script_content = #{scriptContent}, remark = #{remark}, tool_class_name = #{toolClassName}
+        WHERE id = #{id} AND is_tool = 1
+    </update>
+
+    <!-- 引用追踪：查询全部程序脚本 -->
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM program_script ORDER BY id
+    </select>
+
+    <!-- 内联资源：按流程ID查询 -->
+    <select id="selectByFlowId" resultMap="BaseResultMap">
+        SELECT * FROM program_script WHERE flow_id = #{flowId} ORDER BY id
+    </select>
+
+    <!-- 内联资源：流程删除时级联清理 -->
+    <delete id="deleteByFlowId">
+        DELETE FROM program_script WHERE flow_id = #{flowId}
+    </delete>
+
+</mapper>

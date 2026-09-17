@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.RedisScriptMapper">
+    <select id="selectPage" resultType="com.arbor.entity.RedisScript">
+        SELECT id, name, flow_id, datasource_id, prefix_id, command, redis_key, redis_value, ttl, ttl_unit, remark, create_time, update_time
+        FROM redis_script
+        <where>
+            <!-- 全局管理页只列全局资源；内联资源（flow_id 非空）由设计器按流程加载 -->
+            AND flow_id IS NULL
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY ${sortField} ${sortOrder}
+    </select>
+    <select id="selectById" resultType="com.arbor.entity.RedisScript">
+        SELECT id, name, flow_id, datasource_id, prefix_id, command, redis_key, redis_value, ttl, ttl_unit, remark, create_time, update_time
+        FROM redis_script WHERE id = #{id}
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO redis_script (name, flow_id, datasource_id, prefix_id, command, redis_key, redis_value, ttl, ttl_unit, remark, uid)
+        VALUES (#{name}, #{flowId}, #{datasourceId}, #{prefixId}, #{command}, #{redisKey}, #{redisValue}, #{ttl}, #{ttlUnit}, #{remark}, #{uid})
+    </insert>
+    <update id="update">
+        UPDATE redis_script SET name=#{name}, flow_id = #{flowId}, datasource_id=#{datasourceId},
+        prefix_id=#{prefixId}, command=#{command},
+        redis_key=#{redisKey}, redis_value=#{redisValue}, ttl=#{ttl}, ttl_unit=#{ttlUnit}, remark=#{remark} WHERE id=#{id}
+    </update>
+    <delete id="deleteById">DELETE FROM redis_script WHERE id=#{id}</delete>
+
+    <!-- 引用追踪：查询全部 Redis 脚本 -->
+    <select id="selectAll" resultType="com.arbor.entity.RedisScript">
+        SELECT id, name, flow_id, datasource_id, prefix_id, command, redis_key, redis_value, ttl, ttl_unit, remark, create_time, update_time
+        FROM redis_script ORDER BY id
+    </select>
+
+    <!-- 引用追踪：按 Redis 数据源ID查脚本 -->
+    <select id="selectByDatasourceId" resultType="com.arbor.entity.RedisScript">
+        SELECT id, name, flow_id, datasource_id, prefix_id, command, redis_key, redis_value, ttl, ttl_unit, remark, create_time, update_time
+        FROM redis_script WHERE datasource_id = #{datasourceId}
+    </select>
+
+    <!-- 内联资源：按流程ID查（对齐 ApiConfigMapper.selectByFlowId） -->
+    <select id="selectByFlowId" resultType="com.arbor.entity.RedisScript">
+        SELECT id, name, flow_id, datasource_id, prefix_id, command, redis_key, redis_value, ttl, ttl_unit, remark, create_time, update_time
+        FROM redis_script WHERE flow_id = #{flowId} ORDER BY id
+    </select>
+
+    <!-- 内联资源：流程删除时级联清理 -->
+    <delete id="deleteByFlowId">DELETE FROM redis_script WHERE flow_id = #{flowId}</delete>
+
+    <!-- 数据源删除时级联清理（含内联配置），避免留下无法执行的孤儿配置 -->
+    <delete id="deleteByDatasourceId">DELETE FROM redis_script WHERE datasource_id = #{datasourceId}</delete>
+
+    <!-- 按业务前缀反查：D11 使用统计的起点，D8 删除保护也靠它 -->
+    <select id="selectByPrefixId" resultType="com.arbor.entity.RedisScript">
+        SELECT id, name, flow_id, datasource_id, prefix_id, command, redis_key, redis_value, ttl, ttl_unit, remark, create_time, update_time
+        FROM redis_script WHERE prefix_id = #{prefixId} ORDER BY flow_id, id
+    </select>
+</mapper>

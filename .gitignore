@@ -1,0 +1,54 @@
+# ===== Java / Maven =====
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.war
+*.log
+logs/
+
+# ===== 测试代码不入库（含内部逻辑与测试用凭据） =====
+**/src/test/
+
+# ===== 前端 (arbor-ui 目录内有自己的 .gitignore，这里兜底) =====
+node_modules/
+dist/
+dist.tar
+dist-ssr/
+*.local
+# 前端构建产物，由 .private/tools/build_ui.ps1 自动生成
+arbor-server/src/main/resources/static/
+
+# ===== IDE / 编辑器 =====
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db
+
+# ===== 工具生成目录 =====
+.codegraph/
+.playwright-mcp/
+arthas-output/
+.qoder/
+
+# ===== 本地运行时产物统一目录（日志/进程状态/密钥/token，由 tools/*.ps1 生成） =====
+.arbor/
+
+# ===== Claude Code 本地配置（团队共享配置保留） =====
+.claude/settings.local.json
+
+# ===== 临时截图（页面调试产物） =====
+/*.png
+
+.private
+tools
+
+CLAUDE.md
+docs
+
+

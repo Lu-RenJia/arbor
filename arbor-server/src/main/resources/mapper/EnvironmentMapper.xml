@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.EnvironmentMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.Environment">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="remark" property="remark"/>
+        <result column="is_default" property="isDefault"/>
+        <result column="is_deleted" property="isDeleted"/>
+        <result column="deleted_time" property="deletedTime"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, code, remark, is_default, is_deleted, deleted_time, sort_order, create_time, update_time
+    </sql>
+
+    <!-- 分页查询（排除已删除） -->
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM environment
+        <where>
+            AND is_deleted = 0
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY ${sortField} ${sortOrder}
+    </select>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM environment WHERE id = #{id}
+    </select>
+
+    <!-- 根据编码查询 -->
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM environment WHERE code = #{code} AND is_deleted = 0
+    </select>
+
+    <!-- 查询默认环境 -->
+    <select id="selectDefault" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM environment WHERE is_default = 1 AND is_deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 查询所有活跃环境 -->
+    <select id="selectActive" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM environment
+        WHERE is_deleted = 0 AND user_id = #{userId}
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO environment (name, code, remark, is_default, is_deleted, sort_order)
+        VALUES (#{name}, #{code}, #{remark}, #{isDefault}, #{isDeleted}, #{sortOrder})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE environment
+        SET name = #{name},
+            code = #{code},
+            remark = #{remark},
+            sort_order = #{sortOrder}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 软删除 -->
+    <update id="softDelete">
+        UPDATE environment
+        SET is_deleted = 1, deleted_time = #{deletedTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 清空当前用户的其他默认环境（排除指定ID） -->
+    <update id="clearDefaultExcept">
+        UPDATE environment
+        SET is_default = 0
+        WHERE is_default = 1 AND id != #{excludeId}
+    </update>
+
+</mapper>

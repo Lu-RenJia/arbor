@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.AppMarketMapper">
+    <resultMap id="BaseResultMap" type="com.arbor.entity.AppMarket">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="remark" property="remark"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="del_flag" property="delFlag"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM app_market WHERE del_flag = '0'
+        <if test="name != null and name != ''">AND name LIKE CONCAT('%',#{name},'%')</if>
+        ORDER BY update_time DESC, id DESC
+    </select>
+
+    <select id="selectPageByUserId" resultMap="BaseResultMap">
+        SELECT m.* FROM app_market m
+        INNER JOIN app_market_user u ON m.id = u.market_id
+        WHERE u.user_id = #{userId} AND m.del_flag = '0'
+        <if test="name != null and name != ''">AND m.name LIKE CONCAT('%',#{name},'%')</if>
+        ORDER BY m.update_time DESC, m.id DESC
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">SELECT * FROM app_market WHERE id=#{id}</select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO app_market (name, remark, create_by) VALUES (#{name}, #{remark}, #{createBy})
+    </insert>
+
+    <update id="update">
+        UPDATE app_market SET name=#{name}, remark=#{remark}, update_by=#{updateBy} WHERE id=#{id}
+    </update>
+
+    <update id="deleteById">UPDATE app_market SET del_flag='2' WHERE id=#{id}</update>
+
+    <select id="selectUserIdsByMarketId" resultType="long">
+        SELECT user_id FROM app_market_user WHERE market_id=#{marketId}
+    </select>
+
+    <insert id="insertUsers">
+        INSERT INTO app_market_user (market_id, user_id) VALUES
+        <foreach collection="userIds" item="uid" separator=",">(#{marketId}, #{uid})</foreach>
+    </insert>
+
+    <delete id="deleteUsersByMarketId">DELETE FROM app_market_user WHERE market_id=#{marketId}</delete>
+
+    <select id="selectAppsByMarketId" resultType="com.arbor.vo.AppMarketAppVO">
+        SELECT a.id, a.market_id as marketId, a.app_id as appId, a.env_id as envId, a.shared_by as sharedBy, a.create_time as createTime,
+               u.nickname as sharedByName
+        FROM app_market_app a
+        LEFT JOIN user u ON a.shared_by = u.id
+        WHERE a.market_id = #{marketId}
+        ORDER BY a.create_time DESC
+    </select>
+
+    <insert id="insertApp" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO app_market_app (market_id, app_id, env_id, shared_by) VALUES (#{marketId}, #{appId}, #{envId}, #{sharedBy})
+    </insert>
+
+    <delete id="deleteAppByMarketAndApp">DELETE FROM app_market_app WHERE market_id=#{marketId} AND app_id=#{appId}</delete>
+
+    <select id="countAppByMarketAndApp" resultType="int">
+        SELECT COUNT(*) FROM app_market_app WHERE market_id=#{marketId} AND app_id=#{appId}
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT m.* FROM app_market m
+        INNER JOIN app_market_user u ON m.id = u.market_id
+        WHERE u.user_id = #{userId} AND m.del_flag = '0'
+        ORDER BY m.update_time DESC, m.id DESC
+    </select>
+
+    <select id="isUserInMarket" resultType="int">
+        SELECT COUNT(*) FROM app_market_user WHERE market_id=#{marketId} AND user_id=#{userId}
+    </select>
+
+    <select id="selectMarketIdsByAppId" resultType="long">
+        SELECT market_id FROM app_market_app WHERE app_id = #{appId}
+    </select>
+
+    <select id="selectSharedBy" resultType="java.lang.Long">
+        SELECT shared_by FROM app_market_app
+        WHERE market_id = #{marketId} AND app_id = #{appId}
+        LIMIT 1
+    </select>
+
+    <select id="selectSharesByAppId" resultType="com.arbor.vo.AppShareVO">
+        SELECT a.market_id as marketId, m.name as marketName, a.env_id as envId, a.shared_by as sharedBy
+        FROM app_market_app a
+        JOIN app_market m ON a.market_id = m.id
+        WHERE a.app_id = #{appId} AND m.del_flag = '0'
+        ORDER BY a.market_id, a.env_id
+    </select>
+
+    <select id="isUserAndAppInMarket" resultType="int">
+        SELECT COUNT(*)
+        FROM app_market_user u
+        JOIN app_market_app a ON u.market_id = a.market_id
+        WHERE u.market_id = #{marketId}
+          AND u.user_id = #{userId}
+          AND a.app_id = #{appId}
+    </select>
+</mapper>

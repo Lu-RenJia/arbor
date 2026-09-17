@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.FlowScheduleMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.FlowSchedule">
+        <id column="id" property="id"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="cron_expr" property="cronExpr"/>
+        <result column="enabled" property="enabled"/>
+        <result column="max_exec_count" property="maxExecCount"/>
+        <result column="exec_count" property="execCount"/>
+        <result column="last_exec_time" property="lastExecTime"/>
+        <result column="next_exec_time" property="nextExecTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectByFlowId" resultMap="BaseResultMap">
+        SELECT * FROM flow_schedule WHERE flow_id = #{flowId}
+    </select>
+
+    <select id="selectAllEnabled" resultMap="BaseResultMap">
+        SELECT * FROM flow_schedule WHERE enabled = 1
+    </select>
+
+    <select id="selectByFlowIds" resultMap="BaseResultMap">
+        SELECT * FROM flow_schedule WHERE flow_id IN
+        <foreach collection="flowIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO flow_schedule (flow_id, cron_expr, enabled, max_exec_count, exec_count, next_exec_time)
+        VALUES (#{flowId}, #{cronExpr}, #{enabled}, #{maxExecCount}, #{execCount}, #{nextExecTime})
+    </insert>
+
+    <update id="updateByFlowId">
+        UPDATE flow_schedule
+        SET cron_expr = #{cronExpr}, max_exec_count = #{maxExecCount}, next_exec_time = #{nextExecTime}
+        WHERE flow_id = #{flowId}
+    </update>
+
+    <update id="updateEnabled">
+        UPDATE flow_schedule SET enabled = #{enabled}, next_exec_time = #{nextExecTime}
+        WHERE flow_id = #{flowId}
+    </update>
+
+    <update id="incrExecCount">
+        UPDATE flow_schedule SET exec_count = exec_count + 1, last_exec_time = #{lastExecTime}, next_exec_time = #{nextExecTime}
+        WHERE flow_id = #{flowId}
+    </update>
+
+    <update id="disableByFlowId">
+        UPDATE flow_schedule SET enabled = 0, next_exec_time = NULL WHERE flow_id = #{flowId}
+    </update>
+
+    <delete id="deleteByFlowId">
+        DELETE FROM flow_schedule WHERE flow_id = #{flowId}
+    </delete>
+
+</mapper>

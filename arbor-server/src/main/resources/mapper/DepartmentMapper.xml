@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.DepartmentMapper">
+
+    <select id="selectAll" resultType="com.arbor.entity.Department">
+        SELECT id, name, parent_id, ancestors, remark, leader, phone, email, sort_order, status, del_flag, create_time, update_time
+        FROM department WHERE del_flag = '0' ORDER BY sort_order, id
+    </select>
+
+    <select id="selectPage" resultType="com.arbor.entity.Department">
+        SELECT id, name, parent_id, ancestors, remark, leader, phone, email, sort_order, status, del_flag, create_time, update_time
+        FROM department WHERE del_flag = '0' ORDER BY sort_order, id
+    </select>
+
+    <select id="selectById" resultType="com.arbor.entity.Department">
+        SELECT id, name, parent_id, ancestors, remark, leader, phone, email, sort_order, status, del_flag, create_time, update_time
+        FROM department WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO department (name, parent_id, ancestors, remark, leader, phone, email, sort_order, status)
+        VALUES (#{name}, #{parentId}, #{ancestors}, #{remark}, #{leader}, #{phone}, #{email}, #{sortOrder}, #{status})
+    </insert>
+
+    <update id="update">
+        UPDATE department SET name = #{name}, parent_id = #{parentId}, ancestors = #{ancestors},
+            remark = #{remark}, leader = #{leader}, phone = #{phone}, email = #{email},
+            sort_order = #{sortOrder}, status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <update id="deleteById">
+        UPDATE department SET del_flag = '2' WHERE id = #{id}
+    </update>
+
+</mapper>

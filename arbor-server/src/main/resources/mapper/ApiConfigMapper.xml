@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arbor.mapper.ApiConfigMapper">
+
+    <resultMap id="BaseResultMap" type="com.arbor.entity.ApiConfig">
+        <id column="id" property="id"/>
+        <result column="api_id" property="apiId"/>
+        <result column="name" property="name"/>
+        <result column="method" property="method"/>
+        <result column="url" property="url"/>
+        <result column="timeout" property="timeout"/>
+        <result column="headers" property="headers"/>
+        <result column="params" property="params"/>
+        <result column="body_type" property="bodyType"/>
+        <result column="body_content" property="bodyContent"/>
+        <result column="response_example" property="responseExample"/>
+        <result column="remark" property="remark"/>
+        <result column="flow_id" property="flowId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM api_config
+        <where>
+            AND flow_id IS NULL
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY ${sortField} ${sortOrder}
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM api_config WHERE id = #{id}
+    </select>
+
+    <select id="selectByApiId" resultMap="BaseResultMap">
+        SELECT * FROM api_config WHERE api_id = #{apiId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO api_config (api_id, name, method, url, timeout, headers, params, body_type, body_content, remark, flow_id, uid)
+        VALUES (#{apiId}, #{name}, #{method}, #{url}, #{timeout}, #{headers}, #{params}, #{bodyType}, #{bodyContent}, #{remark}, #{flowId}, #{uid})
+    </insert>
+
+    <update id="update">
+        UPDATE api_config
+        SET name = #{name}, method = #{method}, url = #{url}, timeout = #{timeout},
+            headers = #{headers}, params = #{params}, body_type = #{bodyType},
+            body_content = #{bodyContent}, remark = #{remark}, flow_id = #{flowId}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM api_config WHERE id = #{id}
+    </delete>
+
+    <!-- 引用追踪：查询全部接口配置 -->
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM api_config ORDER BY id
+    </select>
+
+    <!-- 内联资源：按流程ID查询 -->
+    <select id="selectByFlowId" resultMap="BaseResultMap">
+        SELECT * FROM api_config WHERE flow_id = #{flowId} ORDER BY id
+    </select>
+
+    <!-- 内联资源：流程删除时级联清理 -->
+    <delete id="deleteByFlowId">
+        DELETE FROM api_config WHERE flow_id = #{flowId}
+    </delete>
+
+</mapper>
