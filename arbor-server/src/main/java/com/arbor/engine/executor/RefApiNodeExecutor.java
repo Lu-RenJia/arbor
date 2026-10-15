@@ -51,7 +51,10 @@ public class RefApiNodeExecutor implements NodeExecutor {
             log.info("REF_API 执行: apiConfigId={}", apiConfigId);
             // 解析流程变量池，将变量注入接口参数解析（支持 ${varName} 引用变量池）
             Map<String, String> flowVars = resolveFlowVars(context);
-            Map<String, Object> result = apiConfigService.executeForFlow(apiConfigId, flowVars);
+            // 同时透传前置节点结果：接口配置存在 api_config 表里，绕开了 FlowEngine 的 config 预解析，
+            // 只有把 previousResults 传下去，${_input.xxx} / ${node1.field} 才能解析
+            Map<String, Object> result = apiConfigService.executeForFlow(apiConfigId, flowVars,
+                    context.getPreviousResults());
             boolean success = (boolean) result.getOrDefault("success", false);
             if (success) {
                 // 只返回接口响应 body，不携带 statusCode/responseTime 等程序逻辑字段

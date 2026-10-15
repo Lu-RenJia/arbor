@@ -10,6 +10,8 @@ import com.arbor.dto.ApiConfigDTO;
 import com.arbor.engine.ExecutionLogRecorder;
 import com.arbor.engine.FileOutputHandler;
 import com.arbor.engine.FlowEngine;
+import com.arbor.engine.NodeResult;
+import com.arbor.engine.ParamResolver;
 import org.springframework.beans.factory.annotation.Value;
 import com.arbor.entity.ApiConfig;
 import com.arbor.mapper.ApiConfigMapper;
@@ -58,6 +60,7 @@ public class ApiConfigService {
     private final RedisCacheUtil redisCacheUtil;
     private final ExecutionLogRecorder executionLogRecorder;
     private final FileOutputHandler fileOutputHandler;
+    private final ParamResolver paramResolver;
 
     @Value("${arbor.api.timeout-seconds:10}")
     private int defaultTimeout;
@@ -170,29 +173,36 @@ public class ApiConfigService {
      * @return 响应结果
      */
     public Map<String, Object> testApi(Long apiConfigId, Map<String, String> extraVars) {
-        return doExecuteApi(apiConfigId, extraVars, true);
+        // 接口测试发生在流程之外，没有前置节点结果，故 previousResults 传 null
+        return doExecuteApi(apiConfigId, extraVars, true, null);
     }
 
     /**
      * 流程引擎调用接口（不写独立日志，由流程级日志统一记录）
      *
-     * @param apiConfigId 接口配置ID
-     * @param extraVars   流程变量池解析结果，可为 null
+     * @param apiConfigId     接口配置ID
+     * @param extraVars       流程变量池解析结果，可为 null
+     * @param previousResults 前置节点结果，供 ${_input.xxx} / ${node1.field} 引用；无流程上下文时传 null
      * @return 响应结果
      */
-    public Map<String, Object> executeForFlow(Long apiConfigId, Map<String, String> extraVars) {
-        return doExecuteApi(apiConfigId, extraVars, false);
+    public Map<String, Object> executeForFlow(Long apiConfigId, Map<String, String> extraVars,
+                                              Map<String, NodeResult> previousResults) {
+        return doExecuteApi(apiConfigId, extraVars, false, previousResults);
     }
 
-    private Map<String, Object> doExecuteApi(Long apiConfigId, Map<String, String> extraVars, boolean writeLog) {
+    private Map<String, Object> doExecuteApi(Long apiConfigId, Map<String, String> extraVars, boolean writeLog,
+                                             Map<String, NodeResult> previousResults) {
         ApiConfig entity = getByIdCached(apiConfigId);
         AssertUtils.notNull(entity, ErrorCode.API_CONFIG_NOT_FOUND);
         // 解析全局参数 + 额外变量
         Map<String, String> resolveParams = buildResolveParams(extraVars);
-        String resolvedUrl = DatasourceService.resolve(entity.getUrl(), resolveParams);
-        String resolvedHeaders = DatasourceService.resolve(entity.getHeaders(), resolveParams);
-        String resolvedParams = DatasourceService.resolve(entity.getParams(), resolveParams);
-        String resolvedBody = DatasourceService.resolve(entity.getBodyContent(), resolveParams);
+        // 与 DbScriptService.executeWithScriptDatasource 同源：走 ParamResolver 才能解析
+        // ${_input.xxx} / ${node1.field} 这类带点号路径的引用 —— DatasourceService.resolve 只做
+        // 扁平的整键查找，遇到 _input.xxx 会直接抛"全局参数不存在"
+        String resolvedUrl = paramResolver.resolve(entity.getUrl(), resolveParams, previousResults);
+        String resolvedHeaders = paramResolver.resolve(entity.getHeaders(), resolveParams, previousResults);
+        String resolvedParams = paramResolver.resolve(entity.getParams(), resolveParams, previousResults);
+        String resolvedBody = paramResolver.resolve(entity.getBodyContent(), resolveParams, previousResults);
 
         // 解析 JSON 格式的 headers/params
         Map<String, String> headerMap = parseJsonToMap(resolvedHeaders);

@@ -212,8 +212,36 @@ public class ParamResolver {
         if (obj instanceof Map) {
             return ((Map<String, Object>) obj).get(fieldName);
         }
+        // 字符串形态的值若本身是 JSON 文本，先解析再取字段。
+        // _input 有两种形态：普通字符串（用 ${_input} 直接引用）与 JSON（用 ${_input.xxx} 取字段）。
+        // JSON 判定此前只做在 ApplicationService（应用执行入口），手动执行 / REF_FLOW 子流程 /
+        // 定时任务都不经那里，届时 _input 仍是 JSON 文本，取字段会退化成裸的 Jackson 构造异常。
+        if (obj instanceof String text) {
+            return parseJsonObject(text).get(fieldName);
+        }
         Map<String, Object> map = objectMapper.convertValue(obj, Map.class);
         return map.get(fieldName);
+    }
+
+    /**
+     * JSON 文本 → Map；非 JSON 形态或解析失败返回空 Map
+     * <p>刻意不抛异常：取字段失败应交给调用方给出"字段不存在"的可读错误
+     * （{@link #extractFieldValue} 的 PARAM_FIELD_NOT_FOUND），
+     * 而不是把 Jackson 的构造异常透给用户。</p>
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseJsonObject(String text) {
+        String trimmed = text.trim();
+        if (trimmed.isEmpty() || (trimmed.charAt(0) != '{' && trimmed.charAt(0) != '[')) {
+            return Map.of();
+        }
+        try {
+            Object parsed = objectMapper.readValue(trimmed, Object.class);
+            return parsed instanceof Map ? (Map<String, Object>) parsed : Map.of();
+        } catch (Exception ignored) {
+            // 形似 JSON 但解析失败：当作普通字符串处理，返回空 Map 让上层报"字段不存在"
+            return Map.of();
+        }
     }
 
     /** 将对象转为字符串（直接 toString，避开 Jackson 序列化导致的二次转义） */
