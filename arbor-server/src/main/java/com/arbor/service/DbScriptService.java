@@ -35,7 +35,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -66,6 +66,12 @@ public class DbScriptService {
 
     private static final java.util.Set<String> ALLOWED_SORT_FIELDS = java.util.Set.of("create_time", "update_time", "id");
     private static final java.util.Set<String> ALLOWED_SORT_ORDERS = java.util.Set.of("ASC", "DESC");
+
+    /** Oracle ORA-00918：列名重复/歧义（分页包装成内联视图后暴露） */
+    private static final int ORA_DUPLICATE_COLUMN_ERROR_CODE = 918;
+    private static final String ORA_DUPLICATE_COLUMN_MARKER = "ORA-00918";
+    /** 错误信息前缀，补充重名列时剥离，避免包装两次 */
+    private static final String SQL_FAILED_MESSAGE_PREFIX = "SQL执行失败: ";
 
     /**
      * 带缓存的按 ID 查询（key 按用户隔离，避免多租户过滤被缓存穿透）
@@ -308,6 +314,9 @@ public class DbScriptService {
             throw new BusinessException(ErrorCode.DB_SCRIPT_EXEC_FAILED, "SQL执行超时（" + timeoutSec + "秒）");
         } catch (Exception e) {
             log.error("SQL执行失败", e);
+            if (isDuplicateColumnError(e)) {
+                throw duplicateColumnException(e, ds, psql, timeoutSec);
+            }
             throw new BusinessException(ErrorCode.DB_SCRIPT_EXEC_FAILED, e.getMessage());
         }
     }
@@ -354,7 +363,94 @@ public class DbScriptService {
         }
         PaginationStrategy strategy = PaginationStrategyFactory.getStrategy(ds.getDbType());
         // 分页策略只在外层包裹/追加硬编码整数，不引入新的 ?，故参数列表可原样沿用
-        return executeQuery(ds, psql.withSql(strategy.wrapSql(psql.getSql(), 1, limit)), timeoutSec);
+        ParameterizedSql paged = psql.withSql(strategy.wrapSql(psql.getSql(), 1, limit));
+        try {
+            return executeQuery(ds, paged, timeoutSec);
+        } catch (BusinessException e) {
+            // 分页会把原 SQL 包成内联视图，重名列在这里才会暴露；补上具体字段名
+            if (isDuplicateColumnError(e)) {
+                throw duplicateColumnException(e, ds, psql, timeoutSec);
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * 判断异常链中是否为 Oracle ORA-00918（列名重复/歧义）
+     *
+     * @param error 异常
+     * @return 是否命中
+     */
+    private boolean isDuplicateColumnError(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (current instanceof SQLException sqlException
+                    && sqlException.getErrorCode() == ORA_DUPLICATE_COLUMN_ERROR_CODE) {
+                return true;
+            }
+            if (current.getMessage() != null && current.getMessage().contains(ORA_DUPLICATE_COLUMN_MARKER)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    /**
+     * 为 ORA-00918 补充具体重名字段
+     * <p>用未经分页包装的原始 SQL 描述结果集，统计重复的输出列名。
+     * 只在失败路径调用，不增加正常查询开销。</p>
+     *
+     * @param error     原始异常
+     * @param ds        数据源
+     * @param original  原始 SQL（未分页包装）
+     * @param timeoutSec 查询超时秒数
+     * @return 带重名列提示的业务异常
+     */
+    private BusinessException duplicateColumnException(Exception error, Datasource ds,
+                                                       ParameterizedSql original, int timeoutSec) {
+        String message = error.getMessage() != null ? error.getMessage() : "SQL执行失败";
+        // 流程路径传入的已是包装后的业务异常，剥掉前缀避免出现两次「SQL执行失败」
+        if (message.startsWith(SQL_FAILED_MESSAGE_PREFIX)) {
+            message = message.substring(SQL_FAILED_MESSAGE_PREFIX.length());
+        }
+        List<String> duplicates = findDuplicateColumnLabels(ds, original, timeoutSec);
+        String hint = duplicates.isEmpty()
+                ? "请检查 SELECT 列表及多表 JOIN 中是否有重名列未加别名"
+                : "重复的列名：" + String.join("、", duplicates) + "，请为同名列添加不同别名";
+        return new BusinessException(ErrorCode.DB_SCRIPT_EXEC_FAILED, message + "；" + hint);
+    }
+
+    /**
+     * 描述原始 SQL 的结果集元数据，返回出现多次的输出列名
+     * <p>诊断失败时返回空列表，不影响原始错误信息。</p>
+     *
+     * @param ds         数据源
+     * @param original   原始 SQL（未分页包装）
+     * @param timeoutSec 查询超时秒数
+     * @return 重复列名及次数，如 {@code ST_ITEM_CODE（2 次）}
+     */
+    private List<String> findDuplicateColumnLabels(Datasource ds, ParameterizedSql original, int timeoutSec) {
+        try (Connection conn = dynamicDataSourceManager.getConnection(ds);
+             PreparedStatement ps = conn.prepareStatement(original.getSql())) {
+            ps.setQueryTimeout(timeoutSec);
+            original.bindTo(ps);
+            ResultSetMetaData meta = ps.getMetaData();
+            if (meta == null) {
+                return List.of();
+            }
+            Map<String, Integer> counts = new LinkedHashMap<>();
+            for (int i = 1; i <= meta.getColumnCount(); i++) {
+                counts.merge(meta.getColumnLabel(i), 1, Integer::sum);
+            }
+            return counts.entrySet().stream()
+                    .filter(entry -> entry.getValue() > 1)
+                    .map(entry -> entry.getKey() + "（" + entry.getValue() + " 次）")
+                    .collect(Collectors.toList());
+        } catch (Exception ex) {
+            log.debug("ORA-00918 重名列诊断失败: {}", ex.getMessage());
+            return List.of();
+        }
     }
 
     /** 执行参数化查询并返回结果列表 */
@@ -368,9 +464,12 @@ public class DbScriptService {
                 ResultSetMetaData meta = rs.getMetaData();
                 int columnCount = meta.getColumnCount();
                 while (rs.next()) {
-                    Map<String, Object> row = new HashMap<>();
+                    // LinkedHashMap 保持 SELECT 列顺序（HashMap 会按哈希顺序返回）
+                    Map<String, Object> row = new LinkedHashMap<>();
                     for (int i = 1; i <= columnCount; i++) {
-                        row.put(meta.getColumnName(i), rs.getObject(i));
+                        // 别名取 getColumnLabel（列的建议标题），与 DbQueryNodeExecutor / SqlTool 保持一致；
+                        // getColumnName 是底层列名，不同驱动下带别名的返回值不一致
+                        row.put(meta.getColumnLabel(i), rs.getObject(i));
                     }
                     rows.add(row);
                 }

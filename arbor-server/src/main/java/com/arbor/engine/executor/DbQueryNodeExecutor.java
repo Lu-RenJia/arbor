@@ -19,7 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -91,7 +91,8 @@ public class DbQueryNodeExecutor implements NodeExecutor {
                     List<Map<String, Object>> resultList = new ArrayList<>();
 
                     while (rs.next()) {
-                        Map<String, Object> row = new HashMap<>();
+                        // LinkedHashMap 保持 SELECT 列顺序（HashMap 会按哈希顺序返回）
+                        Map<String, Object> row = new LinkedHashMap<>();
                         for (int i = 1; i <= columnCount; i++) {
                             row.put(meta.getColumnLabel(i), rs.getObject(i));
                         }

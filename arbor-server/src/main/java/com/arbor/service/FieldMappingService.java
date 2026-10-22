@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,6 +37,10 @@ public class FieldMappingService {
     private final ObjectMapper objectMapper;
 
     private static final String CACHE_PREFIX = "field_mapping:user";
+    /** 标量数组（如 ["a","b"]）包装成单列时使用的字段名 */
+    private static final String SCALAR_FIELD = "value";
+    /** 标量列在前端显示的列名 */
+    private static final String SCALAR_FIELD_LABEL = "值";
 
     private String cacheKey(Long flowId) {
         Long userId = TenantContext.getUserId();
@@ -136,7 +141,11 @@ public class FieldMappingService {
 
     /**
      * 对结果数据应用字段映射，返回适合前端渲染的结构
-     * @param data  原始结果（Map 或 List&lt;Map&gt;）
+     * <p>支持对象、对象数组，以及标量数组（如 {@code ["a","b"]}）——
+     * 标量元素统一包装成 {@code {"value": "a"}} 的单列行，避免强转 {@code Map} 抛
+     * {@code ClassCastException}。</p>
+     *
+     * @param data   原始结果（Map / List&lt;Map&gt; / 标量数组 / 标量）
      * @param flowId 流程ID
      * @return { columns: [{fieldName, fieldLabel, mappingJson}], rows: [Map] }
      */
@@ -150,14 +159,23 @@ public class FieldMappingService {
         }
 
         boolean isArray = data instanceof List;
-        List<Map<String, Object>> rows;
-        if (isArray) {
-            rows = (List<Map<String, Object>>) data;
+        List<Map<String, Object>> rows = new ArrayList<>();
+        boolean scalarElement = false;
+        if (data instanceof List<?> list) {
+            for (Object item : list) {
+                if (!(item instanceof Map)) {
+                    scalarElement = true;
+                }
+                rows.add(toRow(item));
+            }
         } else if (data instanceof Map) {
-            rows = List.of((Map<String, Object>) data);
-        } else {
-            rows = List.of();
+            rows.add((Map<String, Object>) data);
+        } else if (data != null) {
+            scalarElement = true;
+            rows.add(toRow(data));
         }
+        // lambda 内引用需要 effectively final
+        final boolean hasScalarElement = scalarElement;
 
         // 收集所有字段名（按 JSON 原始顺序）
         Map<String, Boolean> fieldOrder = new LinkedHashMap<>();
@@ -182,7 +200,11 @@ public class FieldMappingService {
             Map<String, Object> col = new LinkedHashMap<>();
             col.put("fieldName", field);
             FieldMappingVO fm = mappingMap.get(field);
-            col.put("fieldLabel", fm != null ? fm.getFieldLabel() : field);
+            String fieldLabel = fm != null ? fm.getFieldLabel() : field;
+            if (fm == null && hasScalarElement && SCALAR_FIELD.equals(field)) {
+                fieldLabel = SCALAR_FIELD_LABEL;
+            }
+            col.put("fieldLabel", fieldLabel);
             col.put("mappingJson", fm != null ? fm.getMappingJson() : null);
             return col;
         }).collect(Collectors.toList());
@@ -213,5 +235,21 @@ public class FieldMappingService {
         result.put("rows", mappedRows);
         result.put("isArray", isArray);
         return result;
+    }
+
+    /**
+     * 把结果数组中的单个元素转为一行 Map：对象原样返回，标量包装成单列
+     *
+     * @param item 数组元素
+     * @return 行数据
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> toRow(Object item) {
+        if (item instanceof Map) {
+            return (Map<String, Object>) item;
+        }
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put(SCALAR_FIELD, item);
+        return row;
     }
 }
