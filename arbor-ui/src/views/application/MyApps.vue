@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { NDataTable, NButton, NSpace, NModal, NForm, NFormItem, NInput, NSelect, NUpload, useMessage, NPopconfirm, NRadioGroup, NRadioButton } from 'naive-ui'
+import { NDataTable, NButton, NSpace, NModal, NForm, NFormItem, NInput, NSelect, NUpload, useMessage, NPopconfirm, NRadioGroup, NRadioButton, NCheckbox } from 'naive-ui'
 import { getAppPage, createApp, updateApp, deleteApp, executeApp, executeAppWithFile, shareApp, unshareApp, getAppSharedMarkets } from '../../api/application'
 import { getFlowPage, cancelFlowExecution } from '../../api/flow'
 import { getEnvActive } from '../../api/environment'
@@ -10,6 +10,7 @@ import { downloadFileById } from '../../api/file'
 import { exportApps } from '../../api/importExport'
 import { downloadTextFile, buildPackageName } from '../../utils/download'
 import { formatDateTime } from '../../utils/format'
+import { normalizeResult, toPasteText, textStats } from '../../utils/resultExport'
 import { useAuthStore } from '../../stores/auth'
 import MappedResultTable from '../../components/MappedResultTable.vue'
 import ParamFormModal from './ParamFormModal.vue'
@@ -55,7 +56,9 @@ const execErrors = ref<Record<number, string>>({})
 const executing = ref<Record<number, boolean>>({})
 /** 各应用执行中请求的取消控制器（点“取消”时中断 HTTP 等待，结果不再渲染） */
 const execControllers = ref<Record<number, AbortController>>({})
-const resultViewMode = ref<Record<number, 'table' | 'json'>>({})
+const resultViewMode = ref<Record<number, 'table' | 'json' | 'text'>>({})
+/** 文本视图是否输出表头（仅对象表格有效），key=app.id */
+const resultHeader = ref<Record<number, boolean>>({})
 const resultExpanded = ref<Record<number, boolean>>({})
 // 本地输入参数缓存（编辑中的值），key=app.id
 const inputParamsLocal = ref<Record<number, string>>({})
@@ -106,6 +109,11 @@ function renderExpandContent(row: any) {
       ])
     }
     const mode = resultViewMode.value[id] || 'table'
+    // 文本视图：显示和复制用同一份内容（所见即所得）
+    const pasteText = mode === 'text' ? toPasteText(result.data, resultHeader.value[id] !== false) : ''
+    const stats = mode === 'text' ? textStats(pasteText) : null
+    // 标量数组/纯文本没有表头概念，不显示“含表头”
+    const hasHeaderOption = normalizeResult(result.data).columns.length > 0
     return h('div', { style: 'padding:12px 16px' }, [
       h('div', { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px' }, [
         h(NSpace, { align: 'center', size: 12 }, {
@@ -121,7 +129,7 @@ function renderExpandContent(row: any) {
             }, { default: () => `📥 ${result.outputFile.fileName}${result.outputFile.sizeText ? ` (${result.outputFile.sizeText})` : ''}` }) : null,
           ]
         }),
-        h(NSpace, null, {
+        h(NSpace, { align: 'center', size: 8 }, {
           default: () => [
             h(NRadioGroup, {
               value: mode,
@@ -131,20 +139,38 @@ function renderExpandContent(row: any) {
               default: () => [
                 h(NRadioButton, { value: 'table' }, { default: () => '表格' }),
                 h(NRadioButton, { value: 'json' }, { default: () => 'JSON' }),
+                h(NRadioButton, { value: 'text' }, { default: () => '文本' }),
               ]
             }),
-            h(NButton, {
+            mode === 'text' && hasHeaderOption ? h(NCheckbox, {
+              size: 'small',
+              checked: resultHeader.value[id] !== false,
+              onUpdateChecked: (checked: boolean) => { resultHeader.value = { ...resultHeader.value, [id]: checked } }
+            }, { default: () => '含表头' }) : null,
+            mode !== 'table' ? h(NButton, {
               size: 'tiny',
+              disabled: mode === 'text' && !pasteText,
               onClick: (e: MouseEvent) => { e.stopPropagation(); copyResult(id) }
-            }, { default: () => '📋 复制' }),
+            }, { default: () => '📋 复制' }) : null,
+            stats ? h('span', { style: 'font-size:11px;color:#999' }, `${stats.lines} 行 · ${stats.chars} 字符`) : null,
           ]
         }),
       ]),
-      mode === 'table'
-        ? h(MappedResultTable, { flowId: row.flowId, data: result.data, style: 'overflow-x:auto' })
-        : h('pre', {
-            style: 'margin:0;background:#fff;padding:8px;border-radius:4px;font-size:12px;max-height:300px;overflow:auto'
-          }, typeof result === 'string' ? result : JSON.stringify(result, null, 2)),
+      mode === 'text'
+        ? (pasteText
+            ? h('textarea', {
+                readonly: true,
+                value: pasteText,
+                wrap: 'off',
+                spellcheck: false,
+                style: 'width:100%; min-height:120px; max-height:300px; resize:vertical; border:1px solid #d9d9d9; border-radius:4px; padding:8px; font-size:12px; font-family:monospace; line-height:1.5; background:#fff; box-sizing:border-box; white-space:pre; overflow:auto'
+              })
+            : h('div', { style: 'padding:16px;text-align:center;color:#999;font-size:12px' }, '暂无数据'))
+        : mode === 'table'
+          ? h(MappedResultTable, { flowId: row.flowId, data: result.data, style: 'overflow-x:auto' })
+          : h('pre', {
+              style: 'margin:0;background:#fff;padding:8px;border-radius:4px;font-size:12px;max-height:300px;overflow:auto'
+            }, JSON.stringify(result.data ?? null, null, 2)),
     ])
   }
   if (execErrors.value[id]) {
@@ -372,7 +398,7 @@ async function handleExecute(row: any) {
   execErrors.value = { ...execErrors.value, [row.id]: '' }
   const controller = new AbortController()
   execControllers.value = { ...execControllers.value, [row.id]: controller }
-  resultViewMode.value = { ...resultViewMode.value, [row.id]: 'table' }
+  // 保留用户上次选择的结果视图（表格/JSON/文本）与表头开关，重复执行不跳回表格
   resultExpanded.value = { ...resultExpanded.value, [row.id]: true }
   try {
     const file = uploadFiles.value[row.id] || null
@@ -403,11 +429,15 @@ function cancelExecute(appId: number, flowId: number | null) {
   message.info('已取消执行')
 }
 
+/** 复制当前视图可见的内容：文本视图复制粘贴文本，JSON 视图复制显示的 JSON */
 async function copyResult(rowId: number) {
   const r = execResults.value[rowId]
   if (!r) return
-  const target = r.data ?? r
-  const text = typeof target === 'string' ? target : JSON.stringify(target, null, 2)
+  const mode = resultViewMode.value[rowId] || 'table'
+  const text = mode === 'json'
+    ? JSON.stringify(r.data ?? null, null, 2)
+    : toPasteText(r.data, resultHeader.value[rowId] !== false)
+  if (!text) { message.warning('没有可复制的内容'); return }
   try { await navigator.clipboard.writeText(text); message.success('已复制') } catch { message.error('复制失败') }
 }
 

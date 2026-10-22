@@ -70,6 +70,15 @@ function levelColor(level: string): string {
 function levelText(level: string): string {
   return (level || '').padEnd(5, ' ')
 }
+
+/** 供父组件复制当前筛选后可见的日志（与页面显示一致） */
+function getCopyText(): string {
+  return visibleLogs.value
+    .map(l => `${l.time} [${levelText(l.level)}] ${l.logger} - ${l.message}`)
+    .join('\n')
+}
+
+defineExpose({ getCopyText })
 </script>
 
 <template>

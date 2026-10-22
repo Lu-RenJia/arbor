@@ -4,8 +4,9 @@
  * 表单结构与旧设计器保持一致，直接编辑传入的 DesignerNode（config 为 JSON 字符串）。
  */
 import { ref, computed, watch } from 'vue'
-import { NButton, NSpace, NInput, NFormItem, NSelect, NTag, NForm, NRadioGroup, NRadioButton, NInputNumber, NSwitch, NUpload, useMessage } from 'naive-ui'
+import { NButton, NSpace, NInput, NFormItem, NSelect, NTag, NForm, NRadioGroup, NRadioButton, NInputNumber, NSwitch, NUpload, NCheckbox, useMessage } from 'naive-ui'
 import { formatDuration } from '../../../utils/format'
+import { normalizeResult, toPasteText, textStats } from '../../../utils/resultExport'
 import { NODE_TYPE_LABELS, tagTypeOf, tagColorOf } from './useFlowGraph'
 import type { DesignerNode } from './useFlowGraph'
 import { getFlowSchedule, saveFlowSchedule, toggleFlowSchedule, type FlowScheduleVO } from '../../../api/flowSchedule'
@@ -62,7 +63,22 @@ const message = useMessage()
 
 /** 数据显示模式（有示例时显示切换按钮） */
 const nodeDataViewMode = ref<'live' | 'example'>('live')
-watch(() => props.node?.uid, () => { nodeDataViewMode.value = 'live' })
+/** 结果返回的展示格式：false=JSON（默认），true=可粘贴文本 */
+const nodeTextMode = ref(false)
+/** 文本模式是否输出表头 */
+const nodeTextHeader = ref(true)
+watch(() => props.node?.uid, () => {
+  nodeDataViewMode.value = 'live'
+  nodeTextMode.value = false
+  nodeTextHeader.value = true
+})
+
+/** 当前展示的原始数据（实时结果 / 示例） */
+const currentNodeData = computed(() => nodeDataViewMode.value === 'example' ? props.exampleData : props.nodeResult?.data)
+/** 文本模式的粘贴文本：显示与复制同一份内容 */
+const nodeTextPaste = computed(() => toPasteText(currentNodeData.value, nodeTextHeader.value))
+const nodeTextStats = computed(() => textStats(nodeTextPaste.value))
+const nodeHasHeaderOption = computed(() => normalizeResult(currentNodeData.value).columns.length > 0)
 
 function getNodeConfig(field: string): any {
   if (!props.node) return null
@@ -216,16 +232,14 @@ function onExampleFileChange({ file }: { file: any }) {
 
 // ========== 脚本新建/编辑：全部委托父组件弹出与独立页一致的共享弹窗 ==========
 
-function fmtData(data: any): string {
-  if (data === null || data === undefined) return '-'
-  if (typeof data === 'string') return data.length > 300 ? data.slice(0, 300) + '…' : data
-  return JSON.stringify(data, null, 2)
-}
-
-/** 复制节点返回数据到剪贴板 */
+/** 复制当前可见的节点数据：文本模式复制粘贴文本，JSON 模式复制显示的 JSON */
 async function copyNodeData() {
-  if (!props.nodeResult?.data) return
-  const text = typeof props.nodeResult.data === 'string' ? props.nodeResult.data : JSON.stringify(props.nodeResult.data, null, 2)
+  const data = currentNodeData.value
+  if (data === null || data === undefined) { message.warning('没有可复制的内容'); return }
+  const text = nodeTextMode.value
+    ? nodeTextPaste.value
+    : (typeof data === 'string' ? data : JSON.stringify(data, null, 2))
+  if (!text) { message.warning('没有可复制的内容'); return }
   try { await navigator.clipboard.writeText(text); message.success('已复制') } catch { message.error('复制失败') }
 }
 
@@ -752,31 +766,42 @@ function fmtTime(t: string | null) {
     </div>
 
     <!-- 节点返回数据 / 示例结果 -->
-    <div v-if="nodeResult || exampleData !== undefined" style="background: #fff; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); flex: 1; min-height: 0; display: flex; flex-direction: column">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0">
+    <div v-if="nodeResult || exampleData !== undefined" style="background: #fff; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); flex: 1; min-height: 180px; display: flex; flex-direction: column">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-shrink: 0">
         <span style="font-weight: 600; font-size: 13px">📋 结果返回</span>
-        <NSpace>
+        <NSpace :size="6" align="center">
           <span v-if="!nodeResult || nodeDataViewMode === 'example'" style="font-size: 11px; color: #999; background: #f0f0f0; padding: 1px 6px; border-radius: 3px">示例</span>
-          <template v-if="nodeResult">
-            <NRadioGroup v-if="exampleData !== undefined" v-model:value="nodeDataViewMode" size="small">
-              <NRadioButton value="live">数据</NRadioButton>
-              <NRadioButton value="example">示例</NRadioButton>
-            </NRadioGroup>
-            <NButton v-if="nodeDataViewMode === 'live' && nodeResult.success" size="tiny" @click="copyNodeData" quaternary>📋 复制</NButton>
-            <NTag v-if="nodeDataViewMode === 'live'" :type="nodeResult.status === 'STOPPED' ? 'warning' : (nodeResult.success ? 'success' : 'error')" size="tiny">{{ nodeResult.status === 'STOPPED' ? '流程停止' : (nodeResult.success ? '成功' : '失败') }}</NTag>
-            <span v-if="nodeDataViewMode === 'live'" style="font-size:11px; color:#999">{{ formatDuration(nodeResult.duration) }}</span>
-          </template>
+          <NRadioGroup v-if="nodeResult && exampleData !== undefined" v-model:value="nodeDataViewMode" size="small">
+            <NRadioButton value="live">数据</NRadioButton>
+            <NRadioButton value="example">示例</NRadioButton>
+          </NRadioGroup>
+          <NCheckbox v-if="currentNodeData !== undefined && currentNodeData !== null" v-model:checked="nodeTextMode" size="small">文本</NCheckbox>
+          <NButton v-if="currentNodeData !== undefined && currentNodeData !== null" size="tiny" @click="copyNodeData" quaternary>📋 复制</NButton>
         </NSpace>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-shrink: 0; font-size: 11px; color: #999">
+        <template v-if="nodeDataViewMode === 'live' && nodeResult">
+          <NTag :type="nodeResult.status === 'STOPPED' ? 'warning' : (nodeResult.success ? 'success' : 'error')" size="tiny">{{ nodeResult.status === 'STOPPED' ? '流程停止' : (nodeResult.success ? '成功' : '失败') }}</NTag>
+          <span>{{ formatDuration(nodeResult.duration) }}</span>
+        </template>
+        <template v-if="nodeTextMode">
+          <NCheckbox v-if="nodeHasHeaderOption" v-model:checked="nodeTextHeader" size="small">含表头</NCheckbox>
+          <span>{{ nodeTextStats.lines }} 行 · {{ nodeTextStats.chars }} 字符</span>
+        </template>
       </div>
       <!-- 实时数据 -->
       <template v-if="nodeResult && nodeDataViewMode === 'live'">
-        <pre v-if="nodeResult.success" style="margin:0; flex:1; overflow:auto; background:#fafafa; padding:10px; border-radius:4px; font-size:12px; border:1px solid #f0f0f0">{{ fmtData(nodeResult.data) }}</pre>
+        <template v-if="nodeResult.success">
+          <textarea v-if="nodeTextMode" readonly :value="nodeTextPaste" wrap="off" spellcheck="false" style="width:100%; flex:1; min-height:60px; resize:none; border:1px solid #f0f0f0; border-radius:4px; padding:10px; font-size:12px; font-family:monospace; line-height:1.5; background:#fafafa; box-sizing:border-box; white-space:pre; overflow:auto" />
+          <pre v-else style="margin:0; flex:1; overflow:auto; background:#fafafa; padding:10px; border-radius:4px; font-size:12px; border:1px solid #f0f0f0">{{ typeof nodeResult.data === 'string' ? nodeResult.data : JSON.stringify(nodeResult.data, null, 2) }}</pre>
+        </template>
         <div v-else-if="nodeResult.status === 'STOPPED'" style="color:#d48806; font-size:12px; padding:8px; background:#fffbe6; border-radius:4px">流程已停止，本节点未执行</div>
         <div v-else style="color:#cf1322; font-size:12px; padding:8px; background:#fff2f0; border-radius:4px">{{ nodeResult.errorMessage || '未知错误' }}</div>
       </template>
       <!-- 示例数据 -->
       <template v-else>
-        <pre style="margin:0; flex:1; overflow:auto; background:#fafafa; padding:10px; border-radius:4px; font-size:12px; border:1px solid #f0f0f0">{{ typeof exampleData === 'string' ? exampleData : JSON.stringify(exampleData, null, 2) }}</pre>
+        <textarea v-if="nodeTextMode" readonly :value="nodeTextPaste" wrap="off" spellcheck="false" style="width:100%; flex:1; min-height:60px; resize:none; border:1px solid #f0f0f0; border-radius:4px; padding:10px; font-size:12px; font-family:monospace; line-height:1.5; background:#fafafa; box-sizing:border-box; white-space:pre; overflow:auto" />
+        <pre v-else style="margin:0; flex:1; overflow:auto; background:#fafafa; padding:10px; border-radius:4px; font-size:12px; border:1px solid #f0f0f0">{{ typeof exampleData === 'string' ? exampleData : JSON.stringify(exampleData, null, 2) }}</pre>
       </template>
     </div>
     <div v-else-if="showExecPanel && node" style="background: #fff; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center">
