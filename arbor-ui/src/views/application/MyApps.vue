@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { NDataTable, NButton, NSpace, NModal, NForm, NFormItem, NInput, NSelect, NUpload, useMessage, NPopconfirm, NRadioGroup, NRadioButton, NCheckbox } from 'naive-ui'
+import { NDataTable, NButton, NSpace, NModal, NForm, NFormItem, NInput, NSelect, NUpload, useMessage, NPopconfirm, NRadioGroup, NRadioButton } from 'naive-ui'
 import { getAppPage, createApp, updateApp, deleteApp, executeApp, executeAppWithFile, shareApp, unshareApp, getAppSharedMarkets } from '../../api/application'
 import { getFlowPage, cancelFlowExecution } from '../../api/flow'
 import { getEnvActive } from '../../api/environment'
@@ -10,9 +10,8 @@ import { downloadFileById } from '../../api/file'
 import { exportApps } from '../../api/importExport'
 import { downloadTextFile, buildPackageName } from '../../utils/download'
 import { formatDateTime } from '../../utils/format'
-import { normalizeResult, toPasteText, textStats } from '../../utils/resultExport'
 import { useAuthStore } from '../../stores/auth'
-import MappedResultTable from '../../components/MappedResultTable.vue'
+import AppExecResultPanel from '../../components/AppExecResultPanel.vue'
 import ParamFormModal from './ParamFormModal.vue'
 import ImportPreviewModal from '../../components/ImportPreviewModal.vue'
 
@@ -85,100 +84,21 @@ function onParamFormConfirm(json: string) {
 // NaiveUI 2.44.1 使用 type:'expand' 列 + renderExpand，不支持 #expand slot
 function renderExpandContent(row: any) {
   const id = row.id
-  if (executing.value[id]) {
-    return h('div', { style: 'padding:24px;text-align:center' }, [
-      h('span', { style: 'display:inline-block;width:20px;height:20px;border:3px solid #e8e8e8;border-top-color:#18a058;border-radius:50%;animation:arbor-spin 0.8s linear infinite;vertical-align:middle;margin-right:8px' }),
-      h('span', { style: 'color:#999;font-size:13px;vertical-align:middle;margin-right:12px' }, '执行中…'),
-      h(NButton, { size: 'tiny', type: 'error', onClick: () => cancelExecute(id, row.flowId) }, { default: () => '取消执行' }),
-    ])
-  }
-  const result = execResults.value[id]
-  if (result !== undefined) {
-    // 流程停止：显示停止提示信息
-    if (result.stopped) {
-      return h('div', { style: 'padding:12px 16px' }, [
-        h(NSpace, { align: 'center', size: 12 }, {
-          default: () => [
-            h('span', { style: 'font-weight:600;color:#faad14' }, '⏹ 流程停止'),
-            result.duration != null ? h('span', { style: 'font-size:11px;color:#999' }, `耗时 ${result.duration}ms`) : null,
-            result.nodeCount != null ? h('span', { style: 'font-size:11px;color:#999' }, `${result.nodeCount} 节点`) : null,
-          ]
-        }),
-        h('div', { style: 'margin-top:8px;padding:8px 12px;background:#fffbe6;border:1px solid #ffe58f;border-radius:4px;font-size:13px;color:#ad6800' },
-          result.data || '流程已停止'),
-      ])
-    }
-    const mode = resultViewMode.value[id] || 'table'
-    // 文本视图：显示和复制用同一份内容（所见即所得）
-    const pasteText = mode === 'text' ? toPasteText(result.data, resultHeader.value[id] !== false) : ''
-    const stats = mode === 'text' ? textStats(pasteText) : null
-    // 标量数组/纯文本没有表头概念，不显示“含表头”
-    const hasHeaderOption = normalizeResult(result.data).columns.length > 0
-    return h('div', { style: 'padding:12px 16px' }, [
-      h('div', { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px' }, [
-        h(NSpace, { align: 'center', size: 12 }, {
-          default: () => [
-            h('span', {
-              style: { fontWeight: '600', color: result.success ? '#52c41a' : '#ff4d4f' }
-            }, result.success ? '✓ 成功' : '✗ 失败'),
-            result.duration != null ? h('span', { style: 'font-size:11px;color:#999' }, `耗时 ${result.duration}ms`) : null,
-            result.nodeCount != null ? h('span', { style: 'font-size:11px;color:#999' }, `${result.nodeCount} 节点`) : null,
-            result.outputFile ? h(NButton, {
-              size: 'tiny', type: 'info',
-              onClick: (e: MouseEvent) => { e.stopPropagation(); downloadOutputFile(result.outputFile.fileId, result.outputFile.fileName) }
-            }, { default: () => `📥 ${result.outputFile.fileName}${result.outputFile.sizeText ? ` (${result.outputFile.sizeText})` : ''}` }) : null,
-          ]
-        }),
-        h(NSpace, { align: 'center', size: 8 }, {
-          default: () => [
-            h(NRadioGroup, {
-              value: mode,
-              size: 'small',
-              onUpdateValue: (v: string) => { resultViewMode.value = { ...resultViewMode.value, [id]: v as any } }
-            }, {
-              default: () => [
-                h(NRadioButton, { value: 'table' }, { default: () => '表格' }),
-                h(NRadioButton, { value: 'json' }, { default: () => 'JSON' }),
-                h(NRadioButton, { value: 'text' }, { default: () => '文本' }),
-              ]
-            }),
-            mode === 'text' && hasHeaderOption ? h(NCheckbox, {
-              size: 'small',
-              checked: resultHeader.value[id] !== false,
-              onUpdateChecked: (checked: boolean) => { resultHeader.value = { ...resultHeader.value, [id]: checked } }
-            }, { default: () => '含表头' }) : null,
-            mode !== 'table' ? h(NButton, {
-              size: 'tiny',
-              disabled: mode === 'text' && !pasteText,
-              onClick: (e: MouseEvent) => { e.stopPropagation(); copyResult(id) }
-            }, { default: () => '📋 复制' }) : null,
-            stats ? h('span', { style: 'font-size:11px;color:#999' }, `${stats.lines} 行 · ${stats.chars} 字符`) : null,
-          ]
-        }),
-      ]),
-      mode === 'text'
-        ? (pasteText
-            ? h('textarea', {
-                readonly: true,
-                value: pasteText,
-                wrap: 'off',
-                spellcheck: false,
-                style: 'width:100%; min-height:120px; max-height:300px; resize:vertical; border:1px solid #d9d9d9; border-radius:4px; padding:8px; font-size:12px; font-family:monospace; line-height:1.5; background:#fff; box-sizing:border-box; white-space:pre; overflow:auto'
-              })
-            : h('div', { style: 'padding:16px;text-align:center;color:#999;font-size:12px' }, '暂无数据'))
-        : mode === 'table'
-          ? h(MappedResultTable, { flowId: row.flowId, data: result.data, style: 'overflow-x:auto' })
-          : h('pre', {
-              style: 'margin:0;background:#fff;padding:8px;border-radius:4px;font-size:12px;max-height:300px;overflow:auto'
-            }, JSON.stringify(result.data ?? null, null, 2)),
-    ])
-  }
-  if (execErrors.value[id]) {
-    return h('div', { style: 'padding:12px 16px' }, [
-      h('span', { style: 'color:#ff4d4f;font-size:12px' }, execErrors.value[id])
-    ])
-  }
-  return h('div', { style: 'padding:12px 16px;color:#999;font-size:12px' }, '暂无结果')
+  return h(AppExecResultPanel, {
+    result: execResults.value[id],
+    executing: !!executing.value[id],
+    error: execErrors.value[id] || '',
+    flowId: row.flowId,
+    viewMode: resultViewMode.value[id] || 'table',
+    header: resultHeader.value[id] !== false,
+    'onUpdate:viewMode': (v: 'table' | 'json' | 'text') => {
+      resultViewMode.value = { ...resultViewMode.value, [id]: v }
+    },
+    'onUpdate:header': (v: boolean) => {
+      resultHeader.value = { ...resultHeader.value, [id]: v }
+    },
+    onCancel: () => cancelExecute(id, row.flowId)
+  })
 }
 
 const columns: any[] = [
@@ -429,18 +349,6 @@ function cancelExecute(appId: number, flowId: number | null) {
   message.info('已取消执行')
 }
 
-/** 复制当前视图可见的内容：文本视图复制粘贴文本，JSON 视图复制显示的 JSON */
-async function copyResult(rowId: number) {
-  const r = execResults.value[rowId]
-  if (!r) return
-  const mode = resultViewMode.value[rowId] || 'table'
-  const text = mode === 'json'
-    ? JSON.stringify(r.data ?? null, null, 2)
-    : toPasteText(r.data, resultHeader.value[rowId] !== false)
-  if (!text) { message.warning('没有可复制的内容'); return }
-  try { await navigator.clipboard.writeText(text); message.success('已复制') } catch { message.error('复制失败') }
-}
-
 onMounted(async () => { await loadEnvs(); load() })
 
 const expandedRowKeys = computed(() => data.value.filter((r: any) => resultExpanded.value[r.id]).map((r: any) => r.id))
@@ -509,9 +417,3 @@ function onExpandedKeysChange(keys: Array<string | number>) {
     <ImportPreviewModal v-model:show="showImportModal" @done="load" />
   </div>
 </template>
-
-<style>
-@keyframes arbor-spin {
-  to { transform: rotate(360deg); }
-}
-</style>
