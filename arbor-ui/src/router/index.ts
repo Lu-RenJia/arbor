@@ -28,6 +28,7 @@ const router = createRouter({
         { path: 'service/user', name: 'UserManagement', component: () => import('../views/service/UserManagement.vue'), meta: { permission: 'user:list' } },
         { path: 'service/role', name: 'RoleManagement', component: () => import('../views/service/RoleManagement.vue'), meta: { permission: 'role:list' } },
         { path: 'service/menu', name: 'MenuManagement', component: () => import('../views/service/MenuManagement.vue'), meta: { permission: 'menu:list' } },
+        { path: 'service/audit-log', name: 'AuditLog', component: () => import('../views/log/AuditLogList.vue'), meta: { permission: 'audit:list' } },
         { path: 'app/my', name: 'MyApps', component: () => import('../views/application/MyApps.vue'), meta: { permission: 'app:my:list' } },
         { path: 'app/market', name: 'AppMarket', component: () => import('../views/application/AppMarket.vue'), meta: { permission: 'app:market:list' } },
         { path: 'profile', name: 'Profile', component: () => import('../views/profile/Profile.vue') },
