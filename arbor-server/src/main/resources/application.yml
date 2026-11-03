@@ -11,7 +11,7 @@ spring:
   # MySQL 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/arbor?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE:arbor}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USER}
     password: ${MYSQL_PASSWORD}
     hikari:
@@ -27,7 +27,7 @@ spring:
       host: ${REDIS_HOST}
       port: 6379
       password: ${REDIS_PASSWORD}
-      database: 0
+      database: ${REDIS_DATABASE:0}
       timeout: 5000ms
       lettuce:
         pool:
@@ -63,8 +63,8 @@ arbor:
     timeout-seconds: 10          # 接口调用默认超时（秒）
     timeout-max-seconds: 30      # 接口最大超时（秒）
   file:
-    storage-path: D:/data/arbor/files   # 文件存储根路径（示例文件等持久存储）
-    output-path: D:/data/arbor/output   # 输出文件临时路径（执行结果下载缓存，可定期清理）
+    storage-path: ${ARBOR_FILE_STORAGE_PATH:./data/arbor/files}   # 文件存储根路径（示例文件等持久存储）
+    output-path: ${ARBOR_FILE_OUTPUT_PATH:./data/arbor/output}   # 输出文件临时路径（执行结果下载缓存，可定期清理）
     max-upload-size: 10MB        # 最大上传文件大小
 
 # JWT 配置（内置默认值仅供开发/内网使用；生产建议用环境变量 JWT_SECRET 覆盖，HMAC-SHA 要求至少 32 字节）

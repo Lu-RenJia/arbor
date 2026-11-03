@@ -25,6 +25,15 @@
 - **⏰ 定时调度** — Cron 表达式驱动的定时任务，流程自动执行
 - **🎨 现代化前端** — Vue 3 + TypeScript + NaiveUI，响应式交互体验
 
+## 🎬 演示环境
+
+仓库内置一套可直接复现的电商订单演示：8 条流程、8 个应用、应用广场、定时任务、Mock API、演示账号与页面截图。
+
+- 详细搭建步骤与逐页功能导览：[demo/README.md](demo/README.md)
+- 一键种子脚本：`arbor-server/sql/demo/`
+- Mock 接口：`demo/mock-api/server.mjs`
+- Excel 示例：`demo/files/demo_orders.xlsx`
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -46,7 +55,17 @@ cd arbor
 
 ### 2. 初始化数据库
 
-执行arbor-server/sql内的sql
+```bash
+# 平台基础表（必须）
+mysql -u root -p arbor1 < arbor-server/sql/arbor.sql
+
+# 可选：演示数据（业务表/流程/应用/广场/账号）
+mysql -u root -p arbor1 < arbor-server/sql/demo/01_business.sql
+mysql -u root -p arbor1 < arbor-server/sql/demo/02_platform.sql
+mysql -u root -p arbor1 < arbor-server/sql/demo/03_permissions.sql
+```
+
+演示环境的完整说明见 [demo/README.md](demo/README.md)。
 
 ### 3. 启动后端
 
@@ -70,7 +89,8 @@ npm run dev
 
 | 账号 | 密码 | 角色 |
 |------|------|------|
-| `admin` | `admin123` | 管理员 |
+| `admin` | `admgwl66` | 管理员 |
+| `demo` | `demo123` | 演示分析员（需先导入演示种子） |
 | `test` | `test` | 普通用户 |
 
 ## 🏗️ 架构概览

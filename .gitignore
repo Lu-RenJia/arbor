@@ -52,3 +52,6 @@ CLAUDE.md
 docs
 
 
+
+# ===== 本地文件存储（演示/运行时的示例文件与输出文件） =====
+arbor-server/data/

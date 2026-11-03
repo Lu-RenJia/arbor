@@ -1,0 +1,17 @@
+# Arbor 演示 Redis 初始数据（DB1，与平台缓存 DB0 隔离）
+# 执行：
+#   redis-cli -h 127.0.0.1 -p 6379 -a 123456 -n 1 < demo/redis/seed.redis
+# 说明：键名已带业务前缀 demo:，与平台 Redis 缓存互不影响。
+
+# 订单缓存演示：SET / GET / EXISTS / TTL / EXPIRE / DEL
+SET demo:order:last_status PAID
+EXPIRE demo:order:last_status 300
+
+# 内联资源流程写入的键（先给一个初始值，便于对比执行前后）
+SET demo:inline:last_run "inline demo ok" EX 300
+
+# 预置 EUR 汇率，演示 GET&SET 直接命中缓存（不调用 mock API）
+SET demo:exchange_rate:EUR '{"code":0,"currency":"EUR","rate":7.68,"source":"seed"}' EX 3600
+
+# 确保 USD 首次执行为“未命中”，从而演示分支调用接口 + 回填缓存
+DEL demo:exchange_rate:USD

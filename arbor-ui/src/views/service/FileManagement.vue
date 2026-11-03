@@ -78,7 +78,7 @@ onMounted(load)
       bordered
     />
     <div style="margin-top: 8px; color: #999; font-size: 12px">
-      仅显示示例文件（流程中上传的模板文件），用户执行时上传的临时文件不在此列
+      包含流程示例文件与执行输出文件；用户执行时上传的临时文件不在此列，输出文件可定期清理
     </div>
   </div>
 </template>
