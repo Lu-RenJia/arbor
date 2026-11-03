@@ -38,6 +38,8 @@ public class ExecutionLogVO {
     private String executorName;
     /** 状态: SUCCESS/FAIL/STOPPED */
     private String status;
+    /** 停止类型: NORMAL/ABNORMAL（status=STOPPED 时有效） */
+    private String stopType;
     /** 开始时间 */
     private LocalDateTime startTime;
     /** 结束时间 */
@@ -70,6 +72,7 @@ public class ExecutionLogVO {
                 .executorId(entity.getExecutorId())
                 .executorName(entity.getExecutorName())
                 .status(entity.getStatus())
+                .stopType(entity.getStopType())
                 .startTime(entity.getStartTime())
                 .endTime(entity.getEndTime())
                 .duration(entity.getDuration())

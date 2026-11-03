@@ -232,6 +232,11 @@ public class ApplicationService {
     private Object doExecute(Application app, Flow flow, List<FlowNode> nodes, FlowSnapshot snapshot, MultipartFile file) {
         List<FlowSaveDTO.FlowNodeDTO> nodeDTOs = new ArrayList<>();
         boolean hasStart = false;
+        // 分支节点在 DTO 中通过父节点编码关联；先建立 DB id → nodeCode 映射，
+        // 否则应用执行（DTO 路径）会把 Redis GET&SET 的分支节点当成主线节点提前执行。
+        Map<Long, String> nodeCodeById = nodes.stream()
+                .filter(n -> n.getId() != null)
+                .collect(Collectors.toMap(FlowNode::getId, FlowNode::getNodeCode, (a, b) -> a));
 
         // 上传文件：编码 base64，注入 START 节点（应用执行传入的文件）
         String fileBase64 = null;
@@ -254,6 +259,7 @@ public class ApplicationService {
             dto.setNodeName(node.getNodeName());
             dto.setNodeType(node.getNodeType());
             dto.setSortOrder(node.getSortOrder());
+            dto.setBranchOfCode(node.getBranchOf() != null ? nodeCodeById.get(node.getBranchOf()) : null);
             if ("START".equals(node.getNodeType())) {
                 hasStart = true;
                 // 以节点原有配置为基础，合并应用级别的入参和文件
